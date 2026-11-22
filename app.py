@@ -247,7 +247,12 @@ def api_chat():
     messages = body.get("messages") or []
     if not messages:
         return jsonify({"ok": False, "error": "消息为空"}), 400
-    payload = json.dumps({"model": model, "messages": messages}).encode()
+    body_out = {"model": model, "messages": messages}
+    if body.get("tools"):
+        body_out["tools"] = body["tools"]
+    if body.get("tool_choice"):
+        body_out["tool_choice"] = body["tool_choice"]
+    payload = json.dumps(body_out).encode()
     key = _gateway_key()
     req = urllib.request.Request(
         PROXY + "/v1/chat/completions", data=payload, method="POST",
@@ -264,7 +269,13 @@ def api_chat():
             return jsonify({"ok": False, "error": (j.get("error") or {}).get("message", "调用失败"),
                             "ms": ms}), 200
         u = j.get("usage") or {}
-        return jsonify({"ok": True, "reply": j["choices"][0]["message"]["content"],
+        msg = j["choices"][0]["message"]
+        if msg.get("tool_calls"):
+            return jsonify({"ok": True, "tool_calls": msg["tool_calls"], "finish": "tool_calls",
+                            "reply": msg.get("content") or "", "model": j.get("model", model),
+                            "tokens": u.get("total_tokens", 0), "cost": u.get("cost", 0),
+                            "account": acct, "ms": ms})
+        return jsonify({"ok": True, "reply": msg["content"],
                         "model": j.get("model", model), "resolved": u.get("resolved_model_id", ""),
                         "tokens": u.get("total_tokens", 0), "cost": u.get("cost", 0),
                         "account": acct, "ms": ms})

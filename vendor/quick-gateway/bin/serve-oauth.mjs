@@ -13,7 +13,7 @@ import { readFileSync, writeFileSync, appendFileSync, mkdirSync, existsSync } fr
 import { HttpsProxyAgent } from 'https-proxy-agent'
 import { randomUUID, randomBytes } from 'node:crypto'
 import { join } from 'node:path'
-import { handleChatCompletions, handleModels } from '../lib/handler.mjs'
+import { handleChatCompletions, handleModels, dropSocket } from '../lib/handler.mjs'
 import { createSessionStore } from '../lib/sessions.mjs'
 import { quickUsage } from '../lib/usage.mjs'
 import {
@@ -103,7 +103,10 @@ function healthOf(k) {
   if (!health.has(k)) health.set(k, { fails: 0, lastUsed: 0, nextTry: 0, dead: false })
   return health.get(k)
 }
+const backendPool = new Map()
 function backendFor(k) {
+  const cached = backendPool.get(k)
+  if (cached) return cached
   const be = createDirectBackend({
     load: async () => oauthStore.get(k),
     persist: async (s) => oauthStore.set(k, s),
@@ -113,7 +116,15 @@ function backendFor(k) {
     const pick = proxyAgents[proxyRR++ % proxyAgents.length]
     be.agent = pick.agent
   }
+  backendPool.set(k, be)
   return be
+}
+
+function dropBackend(k) {
+  const be = backendPool.get(k)
+  if (!be) return
+  try { dropSocket(be) } catch {}
+  backendPool.delete(k)
 }
 async function quotaOf(k) {
   const c = quotaCache.get(k)
@@ -180,6 +191,7 @@ async function startLogin() {
 
 async function chatWithPool(body, effortHeader, signal) {
   const tried = []
+  let busyAttempts = 0
   for (let attempt = 0; attempt < MAX_FAILOVER; attempt++) {
     const key = pickAccount()
     if (!key) {

@@ -599,6 +599,14 @@ export async function handleChatCompletions({ body, outpostMgr, sessions, option
 }
 
 /** /v1/models in OpenAI shape. */
+export function dropSocket(outpost) {
+  const s = sockets.get(outpost)
+  if (s) {
+    try { s.close() } catch {}
+    sockets.delete(outpost)
+  }
+}
+
 export function handleModels() {
   return new Response(JSON.stringify({ object: 'list', data: MODELS }), {
     headers: { 'content-type': 'application/json' },
