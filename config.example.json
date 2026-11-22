@@ -1,0 +1,57 @@
+{
+  "panel": {
+    "host": "127.0.0.1",
+    "port": 8787
+  },
+  "gateway": {
+    "host": "127.0.0.1",
+    "port": 3426
+  },
+  "registration": {
+    "concurrency": 1,
+    "target": 1,
+    "headless": true,
+    "task_timeout_s": 600,
+    "retries_per_task": 1
+  },
+  "mail": {
+    "domain": "your-domain.com",
+    "worker_url": "https://your-worker.your-subdomain.workers.dev",
+    "api_token": "change-me",
+    "provider": "cloudflare",
+    "custom_url": "https://your-mail-api/latest?to={to}&token={token}",
+    "manual_mails": []
+  },
+  "proxy": {
+    "registration": {
+      "enabled": false,
+      "list": [
+        {
+          "url": "http://user:pass@host:port",
+          "enabled": true,
+          "note": "注册用住宅"
+        }
+      ]
+    },
+    "gateway": {
+      "enabled": false,
+      "list": [
+        {
+          "url": "http://user:pass@host:port",
+          "enabled": true,
+          "note": "反代出口"
+        }
+      ]
+    }
+  },
+  "quota": {
+    "stop_percent": 95,
+    "warn_percent": 60
+  },
+  "gateway_behavior": {
+    "default_model": "fast",
+    "max_tokens": 4096,
+    "allow_stream": true,
+    "cors": true
+  }
+}
