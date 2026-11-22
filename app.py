@@ -227,6 +227,56 @@ def api_otp_put():
     return jsonify({"ok": True})
 
 
+
+def _gateway_key():
+    """面板内部调用网关：优先用已签发的第一把 key，其次用环境变量。"""
+    try:
+        keys = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                           "data", "keys.json")))
+        if keys:
+            return keys[0]["key"]
+    except Exception:
+        pass
+    return os.environ.get("PROXY_TOKEN", "")
+
+
+@app.post("/api/chat")
+def api_chat():
+    body = request.get_json(force=True, silent=True) or {}
+    model = body.get("model") or "fast"
+    messages = body.get("messages") or []
+    if not messages:
+        return jsonify({"ok": False, "error": "消息为空"}), 400
+    payload = json.dumps({"model": model, "messages": messages}).encode()
+    key = _gateway_key()
+    req = urllib.request.Request(
+        PROXY + "/v1/chat/completions", data=payload, method="POST",
+        headers={"Content-Type": "application/json",
+                 **({"Authorization": "Bearer " + key} if key else {})})
+    t0 = time.time()
+    try:
+        with urllib.request.urlopen(req, timeout=300) as f:
+            raw = f.read().decode()
+            acct = f.headers.get("x-quick-account", "")
+        ms = int((time.time() - t0) * 1000)
+        j = json.loads(raw)
+        if "choices" not in j:
+            return jsonify({"ok": False, "error": (j.get("error") or {}).get("message", "调用失败"),
+                            "ms": ms}), 200
+        u = j.get("usage") or {}
+        return jsonify({"ok": True, "reply": j["choices"][0]["message"]["content"],
+                        "model": j.get("model", model), "resolved": u.get("resolved_model_id", ""),
+                        "tokens": u.get("total_tokens", 0), "cost": u.get("cost", 0),
+                        "account": acct, "ms": ms})
+    except urllib.error.HTTPError as e:
+        detail = e.read().decode()[:300]
+        return jsonify({"ok": False, "error": f"HTTP {e.code}: {detail}",
+                        "ms": int((time.time() - t0) * 1000)}), 200
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)[:300],
+                        "ms": int((time.time() - t0) * 1000)}), 200
+
+
 @app.get("/api/proxy")
 def api_proxy():
     return jsonify({
