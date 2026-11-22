@@ -35,14 +35,36 @@ class Engine:
         self.mode = "manual"          # manual | auto
 
     # ---------- 控制 ----------
+    def _workers_alive(self):
+        return any(t.is_alive() for t in self.workers)
+
+    def ensure_running(self):
+        """只保证有工作线程，不生成新任务（重试用）。"""
+        with self.lock:
+            if self.running and self._workers_alive():
+                return True
+            self.running = True
+            self.paused = False
+            self.workers = [t for t in self.workers if t.is_alive()]
+            for i in range(self.concurrency):
+                t = threading.Thread(target=self._worker, name=f"w{i}", daemon=True)
+                t.start()
+                self.workers.append(t)
+        return True
+
     def start(self, concurrency=2, target=20, mode="manual"):
         with self.lock:
             self.concurrency = max(1, min(8, int(concurrency)))
             self.target = int(target)
             self.mode = mode if mode in ("manual", "auto") else "manual"
             self.paused = False
-            if self.running:
+            if self.running and self._workers_alive():
+                # 线程还活着：只补任务，不重启
+                self._spawn_tasks()
                 return {"ok": True, "note": "已在运行，参数已更新"}
+            # 状态卡住（线程已死）：自愈重启
+            self.running = False
+            self.workers = [t for t in self.workers if t.is_alive()]
             self.running = True
             self.produced = 0
             for i in range(self.concurrency):
@@ -153,6 +175,10 @@ def _otp_endpoint(tid):
     if prov == "custom" and m.get("custom_url"):
         u = m["custom_url"].replace("{token}", m.get("api_token", "") or "")
         return u.replace("{to}", ""), m.get("api_token", "")
+    # Cloudflare / 默认：用 Worker 的 /latest 接口
+    creds = _mail_creds()
+    if creds:
+        return creds["url"].rstrip("/"), creds["token"]   # run_quick 自己会拼 /latest
     return None
 
 
@@ -242,7 +268,7 @@ class LiveRunner(BaseRunner):
         verdict = ""
         for line in out.splitlines():
             if line.startswith("判定:"):
-                verdict = line.split(":", 1)[1].strip()
+                verdict = line.split(":", 1)[1].split("|")[0].strip()
         if verdict in ("provisioned", "accepted"):
             self.step("password_set", "密码已设置，等待授权")
             self.finish("registered")
@@ -290,14 +316,13 @@ def reconcile_stuck_tasks():
                 pass
     fixed = 0
     with db.conn() as c:
+        # 只要 accounts.jsonl 里有这个邮箱，就算注册成功（包含被误判为失败的）
         rows = [dict(r) for r in c.execute(
-            "SELECT id,email,state FROM tasks WHERE state NOT IN "
-            "('registered','pooled','blocked','verify_failed','dead','interrupted')")]
+            "SELECT id,email,state FROM tasks WHERE state NOT IN ('registered','pooled')")]
     for r in rows:
         if (r["email"] or "").lower() in done:
-            db.update_task(r["id"], state="registered", step="password_set",
-                           fail_reason=None)
-        else:
+            db.update_task(r["id"], state="registered", step="password_set", fail_reason=None)
+        elif r["state"] not in ("verify_failed", "blocked", "dead"):
             db.update_task(r["id"], state="interrupted", fail_reason="panel_restart")
         fixed += 1
     if fixed:

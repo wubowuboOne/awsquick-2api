@@ -18,6 +18,7 @@ DEFAULTS = {
         "gateway": {"enabled": False, "list": []},
     },
     "quota": {"stop_percent": 95, "warn_percent": 60},
+    "pool_import": {"headful": True},
     "gateway_behavior": {"default_model": "fast", "max_tokens": 4096,
                          "allow_stream": True, "cors": True},
 }

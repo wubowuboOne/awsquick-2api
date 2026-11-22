@@ -115,6 +115,7 @@ def api_settings_save():
         "registration": ("concurrency", "target", "headless", "task_timeout_s", "retries_per_task"),
         "quota": ("stop_percent", "warn_percent"),
         "gateway_behavior": ("default_model", "max_tokens", "allow_stream", "cors"),
+        "pool_import": ("headful",),
     }.items():
         src = body.get(section) or {}
         for k in keys:
@@ -131,6 +132,8 @@ def api_config():
         "gateway": CFG["gateway"], "panel": CFG["panel"],
         "mail": CFG["mail"], "quota": CFG["quota"],
         "proxy": CFG["proxy"], "registration": CFG["registration"],
+        "gateway_behavior": CFG.get("gateway_behavior", {}),
+        "pool_import": CFG.get("pool_import", {}),
     })
 
 
@@ -288,6 +291,62 @@ def api_chat():
                         "ms": int((time.time() - t0) * 1000)}), 200
 
 
+
+# ---------- 入池助手（A−） ----------
+from flows.pool_import import get_importer, SHOT
+
+
+@app.post("/api/pool/start")
+def api_pool_start():
+    body = request.get_json(force=True, silent=True) or {}
+    email = (body.get("email") or "").strip()
+    password = body.get("password") or ""
+    if not email:
+        return jsonify({"ok": False, "error": "缺少邮箱"}), 400
+    if not password:
+        row = None
+        with db.conn() as c:
+            row = c.execute("SELECT password FROM tasks WHERE email=? ORDER BY id DESC LIMIT 1",
+                            (email,)).fetchone()
+        password = (row["password"] if row else "") or ""
+    if not password:
+        return jsonify({"ok": False, "error": "该邮箱没有记录密码，请手动填写"}), 400
+    r = json.loads(urllib.request.urlopen(
+        urllib.request.Request(PROXY + "/login", method="POST"), timeout=30).read().decode())
+    res = get_importer().start(email, password, r["url"])
+    return jsonify(res)
+
+
+@app.get("/api/pool/status")
+def api_pool_status():
+    return jsonify(get_importer().status())
+
+
+@app.get("/api/pool/shot")
+def api_pool_shot():
+    if not os.path.exists(SHOT):
+        return ("", 404)
+    from flask import send_file
+    return send_file(SHOT, mimetype="image/png", max_age=0)
+
+
+@app.post("/api/pool/click")
+def api_pool_click():
+    body = request.get_json(force=True, silent=True) or {}
+    return jsonify(get_importer().click(body.get("x", 0), body.get("y", 0)))
+
+
+@app.post("/api/pool/type")
+def api_pool_type():
+    body = request.get_json(force=True, silent=True) or {}
+    return jsonify(get_importer().type_text(body.get("text", "")))
+
+
+@app.post("/api/pool/stop")
+def api_pool_stop():
+    return jsonify(get_importer().stop())
+
+
 @app.get("/api/proxy")
 def api_proxy():
     return jsonify({
@@ -346,9 +405,8 @@ def api_retry(tid):
     db.update_task(tid, state="created", step="retrying", fail_reason=None,
                    retries=t["retries"] + 1, duration_ms=None)
     e = engine.get_engine()
+    e.ensure_running()
     e.q.put(tid)
-    if not e.running:
-        e.start(e.concurrency, e.produced + 1, e.mode)
     db.log(f"手动重试 #{tid}", "system", tid)
     return jsonify({"ok": True})
 

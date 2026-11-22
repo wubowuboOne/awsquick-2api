@@ -53,5 +53,8 @@
     "max_tokens": 4096,
     "allow_stream": true,
     "cors": true
+  },
+  "pool_import": {
+    "headful": true
   }
 }

@@ -254,13 +254,45 @@ class Run:
                     if "Setting up" not in body and "setting up" not in body.lower():
                         break
                 self.snap(page, "final")
+                # 保存浏览器现场：后续授权大概率可以复用这份 SSO 会话
+                try:
+                    sp = os.path.join("data", "profiles", a.email.replace("@", "_") + ".json")
+                    os.makedirs(os.path.dirname(sp), exist_ok=True)
+                    ctx.storage_state(path=sp)
+                    self.rec["state_path"] = sp
+                    print("现场已保存:", sp)
+                except Exception as e:
+                    print("保存现场失败:", e)
                 self.rec["final_url"] = page.url
                 self.rec["final_text"] = last[:200]
                 with open(os.path.join("data", "accounts.jsonl"), "a") as f:
                     f.write(json.dumps({"email": a.email, "password": pwd, "name": a.name,
-                                        "final_url": page.url, "ts": int(time.time())},
+                                        "final_url": page.url, "ts": int(time.time()),
+                                        "state_path": self.rec.get("state_path")},
                                        ensure_ascii=False) + "\n")
                 self.rec["verdict"] = "provisioned"
+
+                # 同一浏览器里立刻去走授权：验证 SSO 会话是否直接可用
+                if a.then_authorize:
+                    print("→ 同一浏览器内打开授权地址")
+                    try:
+                        page.goto(a.then_authorize, wait_until="domcontentloaded", timeout=60000)
+                    except Exception as e:
+                        print("   打开失败:", e)
+                    for _ in range(12):
+                        page.wait_for_timeout(2500)
+                        st = page.evaluate("""() => ({
+                            url: location.href,
+                            email: [...document.querySelectorAll('input')].filter(i=>i.type==='email').length,
+                            pwd: [...document.querySelectorAll('input')].filter(i=>i.type==='password').length,
+                            cap: !!document.querySelector("iframe[src*='threat-mitigation'],iframe[src*='captcha']"),
+                        })""")
+                        print("   状态:", st["url"][:90], "email=", st["email"], "pwd=", st["pwd"], "captcha=", st["cap"])
+                        if "code=" in st["url"] or (st["pwd"] and st["cap"]):
+                            break
+                    self.snap(page, "after-authorize")
+                    self.rec["authorize_state"] = st
+                    print("RESULT_AUTHORIZE:", json.dumps(st, ensure_ascii=False))
 
             self.finish(browser)
 
@@ -282,6 +314,8 @@ if __name__ == "__main__":
     ap.add_argument("--timezone", default=None)
     ap.add_argument("--headless", action="store_true", default=True)
     ap.add_argument("--otp-url", default=None, help="Worker 取信地址")
+    ap.add_argument("--then-authorize", default=None,
+                    help="注册完成后，在同一个浏览器里直接打开这个授权地址（验证能否免登录）")
     ap.add_argument("--otp-token", default=None, help="Worker 取信口令")
     ap.add_argument("--password", default=None, help="SetPassword 要设置的密码")
     a = ap.parse_args()

@@ -206,6 +206,15 @@
   .toolswitch input:checked:after{transform:translateX(14px)}
   .toolcall{font-size:11.5px;color:var(--muted);background:var(--surface2);border:1px dashed var(--border);
     border-radius:10px;padding:8px 12px;margin-top:4px;font-family:ui-monospace,Menlo,monospace}
+  #pool-live{min-height:120px}
+  .mask .modal .bd .sub{word-break:break-all}
+  .notice{display:flex;gap:12px;align-items:flex-start;background:#fffdf5;border:1px solid #f0e3b8;
+    border-radius:14px;padding:14px 16px;margin-bottom:14px}
+  .notice .ic{width:22px;height:22px;border-radius:50%;background:#b45309;color:#fff;display:grid;
+    place-items:center;font-size:12px;font-weight:700;flex:none;margin-top:1px}
+  .notice .tx{font-size:12.5px;line-height:1.9;color:#6b5a2e;flex:1}
+  .notice .tx b{color:#3f3415}
+  .notice .btn{align-self:flex-start;white-space:nowrap}
 </style>
 <style>
   .krow{display:grid;grid-template-columns:1fr 1fr;gap:12px}
@@ -247,6 +256,15 @@
   .toolswitch input:checked:after{transform:translateX(14px)}
   .toolcall{font-size:11.5px;color:var(--muted);background:var(--surface2);border:1px dashed var(--border);
     border-radius:10px;padding:8px 12px;margin-top:4px;font-family:ui-monospace,Menlo,monospace}
+  #pool-live{min-height:120px}
+  .mask .modal .bd .sub{word-break:break-all}
+  .notice{display:flex;gap:12px;align-items:flex-start;background:#fffdf5;border:1px solid #f0e3b8;
+    border-radius:14px;padding:14px 16px;margin-bottom:14px}
+  .notice .ic{width:22px;height:22px;border-radius:50%;background:#b45309;color:#fff;display:grid;
+    place-items:center;font-size:12px;font-weight:700;flex:none;margin-top:1px}
+  .notice .tx{font-size:12.5px;line-height:1.9;color:#6b5a2e;flex:1}
+  .notice .tx b{color:#3f3415}
+  .notice .btn{align-self:flex-start;white-space:nowrap}
 </style>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 28 28%27%3E%3Crect width=%2728%27 height=%2728%27 rx=%278%27 fill=%27%230b0b0a%27/%3E%3Cpath d=%27M16.6 4.8 L9.2 15.4 h4.9 l-1.7 7.8 7.6-11 h-5.1 z%27 fill=%27white%27/%3E%3C/svg%3E">
 </head>
@@ -356,7 +374,8 @@
   <!-- 账号池 -->
   <section class="view" id="v-accounts">
     <div class="pagehead"><div><h1>账号池</h1><div class="sub">额度、熔断状态与调用量</div></div>
-      <div style="flex:1"></div><button class="btn dark" id="add-acct">授权 / 手动导入</button></div>
+      <div style="flex:1"></div><button class="btn dark" id="pool-open" style="margin-right:8px">自动导入号池</button>
+      <button class="btn" id="add-acct">手动授权</button></div>
     <div class="mod">
       <table><thead><tr><th>账号</th><th>状态</th><th style="width:200px">额度</th><th>调用</th><th>成本</th><th style="text-align:right">操作</th></tr></thead>
       <tbody id="a-rows"></tbody></table>
@@ -458,6 +477,18 @@ resp = client.chat.completions.create(
       <input id="f-q" placeholder="搜索邮箱" style="width:190px;margin-left:8px">
       <button class="btn dark" id="start2" style="margin-left:8px">开始注册</button>
     </div>
+
+    <div class="notice" id="vps-note">
+      <div class="ic">!</div>
+      <div class="tx">
+        <b>部署在 VPS / 服务器上？自动导入的画面可能不完整。</b>
+        没有显示器时，浏览器渲染会缺样式（文字看不见、窗口弹不出来）。
+        这种情况请用右侧的<b>「手动导入」</b>：复制授权地址到自己电脑的浏览器登录，再把回调地址粘贴回来即可。
+        想用自动导入，请把项目跑在有桌面的电脑上，或在设置里打开「导入号池时弹出真实浏览器窗口」。
+      </div>
+      <button class="btn sm" id="vps-note-close">知道了</button>
+    </div>
+
     <div class="mod">
       <table><thead><tr><th>#</th><th>账号</th><th>密码</th><th>注册</th><th>号池</th><th>失败原因</th><th>耗时</th><th>重试</th><th style="text-align:right"></th></tr></thead>
       <tbody id="t-rows"></tbody></table>
@@ -475,54 +506,11 @@ resp = client.chat.completions.create(
 
   <!-- 设置 -->
   <section class="view" id="v-settings">
-    <div class="pagehead"><div><h1>设置</h1><div class="sub">首次部署在这里填，改完立即生效（端口类需重启）</div></div>
+    <div class="pagehead"><div><h1>设置</h1><div class="sub">改完点右上角保存；端口类需重启</div></div>
       <div style="flex:1"></div><button class="btn dark" id="set-save">保存配置</button></div>
 
+    <div class="sec"><h2>反代</h2><div class="line"></div></div>
     <div class="bento">
-      <div class="mod span3">
-        <div class="hd"><div><div class="lab">Mail</div><h2>收信配置</h2></div></div>
-        <div style="display:grid;gap:10px">
-          <label class="sub">收信方式
-            <select id="set-provider" style="width:100%;margin-top:6px">
-              <option value="cloudflare">Cloudflare Email Routing + Worker（推荐）</option>
-              <option value="custom">其它邮箱项目的 HTTP 接口</option>
-              <option value="manual">手动邮箱池（自己准备多个邮箱，逐个注册）</option>
-            </select></label>
-          <div id="cfg-domain">
-            <label class="sub">邮箱域名（用于注册，如 your-domain.com）
-              <input id="set-domain" style="width:100%;margin-top:6px" placeholder="your-domain.com"></label>
-          </div>
-          <div id="cfg-cf">
-            <label class="sub">Cloudflare Worker 地址
-              <input id="set-worker" style="width:100%;margin-top:6px" placeholder="https://xxx.workers.dev"></label>
-            <label class="sub" style="display:block;margin-top:10px">Worker API Token
-              <input id="set-token" type="password" autocomplete="off" style="width:100%;margin-top:6px" placeholder="与 Worker 里一致"></label>
-          </div>
-          <div id="cfg-custom" style="display:none">
-            <label class="sub">取信接口（用 {to} 和 {token} 占位，返回 {"code":"123456"})
-              <input id="set-custom" style="width:100%;margin-top:6px" placeholder="https://api.example.com/mail?to={to}&token={token}"></label>
-            <label class="sub" style="display:block;margin-top:10px">接口密钥（替换 {token}）
-              <input id="set-token2" type="password" autocomplete="off" style="width:100%;margin-top:6px"></label>
-          </div>
-          <div id="cfg-manual" style="display:none">
-            <label class="sub">邮箱池（每行一个，格式 <span class="mono">邮箱,密码</span>，密码可留空）
-              <textarea id="set-manual" style="width:100%;min-height:120px;margin-top:6px;background:var(--surface2);
-                border:1px solid var(--border);border-radius:12px;padding:10px;font-family:ui-monospace,Menlo,monospace;
-                font-size:11.5px;outline:none" placeholder="alice@your-domain.com,Passw0rd!
-bob@your-domain.com"></textarea></label>
-            <div class="sub" style="margin-top:8px">这些邮箱会被逐条拿去注册；跑完自动跳过已用过的。</div>
-          </div>
-        </div>
-        <div class="sub" id="cfg-cf-hint" style="margin-top:12px;line-height:1.9">
-          域名需托管在 Cloudflare，并开启 Email Routing 的 catch-all → 该 Worker。<br>
-          公共临时邮箱域名会被 AWS 直接拒绝（ERR-837）。
-        </div>
-        <div class="sub" id="cfg-manual-hint" style="display:none;margin-top:12px;line-height:1.9">
-          注册跑到验证码那步会停下，你到对应邮箱取码，在「注册任务」里填入即可继续。<br>
-          跑完这个号还需要过一次授权才能进池。
-        </div>
-      </div>
-
       <div class="mod span3">
         <div class="hd"><div><div class="lab">Service</div><h2>服务与额度</h2></div></div>
         <div style="display:grid;gap:10px">
@@ -530,17 +518,6 @@ bob@your-domain.com"></textarea></label>
             <label class="sub">面板端口<input id="set-panel-port" type="number" style="width:100%;margin-top:6px"></label>
             <label class="sub">网关端口<input id="set-gw-port" type="number" style="width:100%;margin-top:6px"></label>
           </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-            <label class="sub">默认并发<input id="set-conc" type="number" min="1" max="8" style="width:100%;margin-top:6px"></label>
-            <label class="sub">默认目标<input id="set-target" type="number" min="1" style="width:100%;margin-top:6px"></label>
-          </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-            <label class="sub">单任务超时（秒）<input id="set-timeout" type="number" min="60" style="width:100%;margin-top:6px"></label>
-            <label class="sub">失败重试次数<input id="set-retries" type="number" min="0" max="5" style="width:100%;margin-top:6px"></label>
-          </div>
-          <label class="sub">无头模式（不弹出浏览器窗口）
-            <select id="set-headless" style="width:100%;margin-top:6px">
-              <option value="true">开启（推荐）</option><option value="false">关闭（可肉眼观察）</option></select></label>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
             <label class="sub">额度预警（%）<input id="set-warn" type="number" min="10" max="99" style="width:100%;margin-top:6px"></label>
             <label class="sub">额度熔断（%）<input id="set-quota" type="number" min="50" max="100" style="width:100%;margin-top:6px"></label>
@@ -566,7 +543,74 @@ bob@your-domain.com"></textarea></label>
         </div>
         <div class="sub" style="margin-top:12px">成本提示：fast 约 $0.0046/次，smart（Opus）约 $0.205/次。</div>
       </div>
+    </div>
 
+    <div class="sec"><h2>注册机</h2><div class="line"></div></div>
+    <div class="bento">
+      <div class="mod span3">
+        <div class="hd"><div><div class="lab">Mail</div><h2>收信配置</h2></div></div>
+        <div style="display:grid;gap:10px">
+          <label class="sub">收信方式
+            <select id="set-provider" style="width:100%;margin-top:6px">
+              <option value="cloudflare">Cloudflare Email Routing + Worker（推荐）</option>
+              <option value="custom">其它邮箱项目的 HTTP 接口</option>
+              <option value="manual">手动邮箱池（自己准备多个邮箱，逐个注册）</option>
+            </select></label>
+          <div id="cfg-domain">
+            <label class="sub">邮箱域名（用于注册，如 your-domain.com）
+              <input id="set-domain" style="width:100%;margin-top:6px" placeholder="your-domain.com"></label>
+          </div>
+          <div id="cfg-cf">
+            <label class="sub">Cloudflare Worker 地址
+              <input id="set-worker" style="width:100%;margin-top:6px" placeholder="https://xxx.workers.dev"></label>
+            <label class="sub" style="display:block;margin-top:10px">Worker API Token
+              <input id="set-token" type="password" autocomplete="off" style="width:100%;margin-top:6px"></label>
+          </div>
+          <div id="cfg-custom" style="display:none">
+            <label class="sub">取信接口（用 {to} 和 {token} 占位）
+              <input id="set-custom" style="width:100%;margin-top:6px" placeholder="https://api.example.com/mail?to={to}&token={token}"></label>
+            <label class="sub" style="display:block;margin-top:10px">接口密钥（替换 {token}）
+              <input id="set-token2" type="password" autocomplete="off" style="width:100%;margin-top:6px"></label>
+          </div>
+          <div id="cfg-manual" style="display:none">
+            <label class="sub">邮箱池（每行一个，<span class="mono">邮箱,密码</span>，密码可留空）
+              <textarea id="set-manual" style="width:100%;min-height:110px;margin-top:6px;background:var(--surface2);
+                border:1px solid var(--border);border-radius:12px;padding:10px;font-family:ui-monospace,Menlo,monospace;
+                font-size:11.5px;outline:none" placeholder="alice@your-domain.com,Passw0rd!"></textarea></label>
+          </div>
+        </div>
+        <div class="sub" id="cfg-cf-hint" style="margin-top:12px;line-height:1.9">
+          域名需托管在 Cloudflare，并开启 Email Routing 的 catch-all → 该 Worker。<br>
+          公共临时邮箱域名会被 AWS 直接拒绝（ERR-837）。
+        </div>
+        <div class="sub" id="cfg-manual-hint" style="display:none;margin-top:12px;line-height:1.9">
+          注册跑到验证码那步会停下，你到对应邮箱取码，在「注册任务」里填入即可继续。
+        </div>
+      </div>
+
+      <div class="mod span3">
+        <div class="hd"><div><div class="lab">Registration</div><h2>注册参数</h2></div></div>
+        <div style="display:grid;gap:10px">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <label class="sub">默认并发<input id="set-conc" type="number" min="1" max="8" style="width:100%;margin-top:6px"></label>
+            <label class="sub">默认目标<input id="set-target" type="number" min="1" style="width:100%;margin-top:6px"></label>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <label class="sub">单任务超时（秒）<input id="set-timeout" type="number" min="60" style="width:100%;margin-top:6px"></label>
+            <label class="sub">失败重试次数<input id="set-retries" type="number" min="0" max="5" style="width:100%;margin-top:6px"></label>
+          </div>
+          <label class="sub">注册时无头（不弹浏览器）
+            <select id="set-headless" style="width:100%;margin-top:6px">
+              <option value="true">开启（推荐）</option><option value="false">关闭（可肉眼观察）</option></select></label>
+          <label class="sub" style="display:flex;align-items:center;gap:10px;margin-top:4px">
+            <input type="checkbox" id="set-headful" style="height:16px;width:16px;border-radius:4px">
+            <span>导入号池时弹出真实浏览器窗口（有显示器时建议开启）</span></label>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec"><h2>系统</h2><div class="line"></div></div>
+    <div class="bento">
       <div class="mod span3">
         <div class="hd"><div><div class="lab">Danger</div><h2>数据</h2></div></div>
         <div style="display:grid;gap:10px">
@@ -578,15 +622,12 @@ bob@your-domain.com"></textarea></label>
           密钥 <span class="mono">data/keys.json</span> · 账本 <span class="mono">data/calls.jsonl</span>
         </div>
       </div>
-
       <div class="mod span3">
         <div class="hd"><div><div class="lab">About</div><h2>关于</h2></div></div>
         <div class="sub" style="line-height:2">
-          <b>AWS Quick 控制台</b> 把 AWS Quick 的服务转换为 OpenAI 兼容格式，
-          一条 <span class="mono">base_url</span> 就能接入任何支持 OpenAI 协议的客户端。<br>
-          附带注册机：新号注册完成后可在「注册任务」里一键导入号池。<br>
-          仓库：<a class="mono" href="https://github.com/Trash-Makers/awsquick-2api" target="_blank" rel="noopener"
-            style="text-decoration:underline">Trash-Makers/awsquick-2api</a><br>
+          <b>AWS Quick 控制台</b> 把 AWS Quick 的服务转换为 OpenAI 兼容格式，一条 <span class="mono">base_url</span> 接入任何 OpenAI 客户端。<br>
+          附带注册机：注册完成的号在「注册任务」里一键导入号池。<br>
+          仓库：<a class="mono" href="https://github.com/Trash-Makers/awsquick-2api" target="_blank" rel="noopener" style="text-decoration:underline">Trash-Makers/awsquick-2api</a><br>
           作者：<b>Trash-Makers</b> · MIT License
         </div>
       </div>
@@ -665,6 +706,27 @@ bob@your-domain.com"></textarea></label>
     </div>
   </div>
 </div></div>
+
+<div class="mask" id="poolmask"><div class="modal" style="width:900px">
+  <div class="hd"><h3>自动导入号池</h3><div style="flex:1"></div>
+    <span class="badge" id="pool-stage">待开始</span>
+    <button class="btn sm" id="pool-close" style="margin-left:8px">关闭</button></div>
+  <div class="bd">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+      <input id="pool-email" placeholder="账号邮箱">
+      <input id="pool-pass" type="password" placeholder="密码（留空则用任务记录里的）">
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <button class="btn dark" id="pool-start">开始</button>
+      <button class="btn" id="pool-stop">停止</button>
+      <span class="sub" style="align-self:center" id="pool-hint">会自动填邮箱密码；出现人机验证时直接在下面的画面里点。</span>
+    </div>
+    <div style="border:1px solid var(--border);border-radius:12px;overflow:hidden;background:#0b0b0a">
+      <img id="pool-live" style="width:100%;display:block;cursor:crosshair" alt="等待画面…">
+    </div>
+    <div class="sub" style="margin-top:8px" id="pool-url">—</div>
+  </div>
+</div></div>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -685,7 +747,7 @@ function route(){
 }
 addEventListener('hashchange',route); route();
 
-let ACC=[], ST={}, POOLED=new Set(), PX={};
+let ACC=[], ST={}, POOLED=new Set(), PX={}, TASKS=[];
 const FAIL_HINTS={
   otp_timeout:['验证码超时','没在时限内收到或取到验证码。检查 Worker 是否在线、域名 catch-all 是否生效，稍后重试。'],
   fingerprint_flag:['设备指纹被标记','AWS 判定环境异常。换一条代理、降低频率，或换浏览器指纹后重试。'],
@@ -789,6 +851,7 @@ async function loadStats(){
 async function loadTasks(){
   const state=$('#f-state')?.value||'', q=($('#f-q')?.value||'').toLowerCase();
   let rows=await (await fetch('/api/tasks?limit=300'+(state?'&state='+state:''))).json();
+  TASKS=rows;
   if(q) rows=rows.filter(r=>r.email.toLowerCase().includes(q));
   const regBadge=r=>{
     const map={registered:['warn','已注册'],pooled:['ok','已入池'],account_active:['ok','可调用'],
@@ -817,7 +880,8 @@ async function loadTasks(){
     <td class="mono" style="color:var(--dim)">${r.retries}</td>
     <td style="text-align:right">${
       pooled ? '' :
-      r.state==='registered' ? `<button class="btn sm" onclick="importAcct('${esc(r.email)}')">导入号池</button>` :
+      r.state==='registered' ? `<button class="btn sm" onclick="poolOpen('${esc(r.email)}')">⚡ 自动导入</button>
+        <button class="btn sm" style="margin-left:5px" onclick="importAcct('${esc(r.email)}')">手动导入</button>` :
       ['blocked','verify_failed','dead','interrupted'].includes(r.state) ? `<button class="btn sm" onclick="retry(${r.id})">重试</button>` : ''
     }</td></tr>`}).join('')
     ||'<tr><td colspan="9" class="empty">还没有任务</td></tr>';
@@ -990,6 +1054,7 @@ async function loadSettings(){
   $('#set-timeout').value=c.registration.task_timeout_s||600;
   $('#set-retries').value=c.registration.retries_per_task??1;
   $('#set-headless').value=String(c.registration.headless!==false);
+  $('#set-headful').checked=!!(c.pool_import && c.pool_import.headful);
   const g=c.gateway_behavior||{};
   $('#set-defmodel').value=g.default_model||'fast';
   $('#set-maxtokens').value=g.max_tokens||4096;
@@ -1021,6 +1086,7 @@ $('#set-save').onclick=async()=>{
       task_timeout_s:+$('#set-timeout').value, retries_per_task:+$('#set-retries').value,
       headless:$('#set-headless').value==='true'},
     quota:{stop_percent:+$('#set-quota').value, warn_percent:+$('#set-warn').value},
+    pool_import:{headful:$('#set-headful').checked},
     gateway_behavior:{default_model:$('#set-defmodel').value,
       max_tokens:+$('#set-maxtokens').value, allow_stream:$('#set-stream').value==='true'},
   };
@@ -1209,6 +1275,61 @@ $('#c-input').addEventListener('input',e=>{
 $('#c-model').addEventListener('change',e=>{ const c=curChat(); c.model=e.target.value; saveChats(); });
 
 loadChats();
+
+/* ---------- 自动导入号池（A−） ---------- */
+let poolTimer=null;
+
+function poolOpen(email){
+  $('#poolmask').classList.add('on');
+  if(email){ $('#pool-email').value=email; $('#pool-pass').value=''; }
+  $('#pool-stage').textContent='待开始';
+  $('#pool-stage').className='badge';
+  $('#pool-live').removeAttribute('src');
+}
+async function poolStart(){
+  const email=$('#pool-email').value.trim();
+  const password=$('#pool-pass').value;
+  if(!email) return toast('请填邮箱');
+  const r=await (await fetch('/api/pool/start',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({email,password})})).json();
+  if(!r.ok) return toast(r.error||'启动失败');
+  toast('已开始，等待画面…');
+  if(poolTimer) clearInterval(poolTimer);
+  poolTimer=setInterval(poolTick,1000);
+  poolTick();
+}
+async function poolTick(){
+  try{
+    const st=await (await fetch('/api/pool/status')).json();
+    $('#pool-stage').textContent=st.stage||'—';
+    $('#pool-stage').className='badge '+(st.done?(st.submit?'ok':'bad'):'info');
+    $('#pool-url').textContent=st.url||'—';
+    const img=$('#pool-live');
+    img.src='/api/pool/shot?t='+Date.now();
+    if(st.done){
+      clearInterval(poolTimer); poolTimer=null;
+      if(st.submit){ toast('已入池'); loadProxy(); }
+      else toast(st.error||'未完成');
+    }
+  }catch(e){}
+}
+$('#pool-live').addEventListener('click',async e=>{
+  const img=e.currentTarget;
+  const rect=img.getBoundingClientRect();
+  if(!img.naturalWidth) return;
+  const x=Math.round((e.clientX-rect.left)/rect.width*img.naturalWidth);
+  const y=Math.round((e.clientY-rect.top)/rect.height*img.naturalHeight);
+  await fetch('/api/pool/click',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({x,y})});
+});
+$('#pool-open').onclick=()=>poolOpen('');
+$('#pool-start').onclick=poolStart;
+$('#pool-stop').onclick=async()=>{ await fetch('/api/pool/stop',{method:'POST'}); toast('已停止'); };
+$('#pool-close').onclick=()=>{ $('#poolmask').classList.remove('on'); if(poolTimer){clearInterval(poolTimer);poolTimer=null;} };
+
+if(localStorage.getItem('aq_vps_note_off')==='1'){ const n=$('#vps-note'); if(n) n.style.display='none'; }
+$('#vps-note-close').onclick=()=>{ $('#vps-note').style.display='none'; localStorage.setItem('aq_vps_note_off','1'); };
+
 loadProxy();loadStats();loadTasks();loadCalls();loadProxies();loadSettings();maybeOnboard();
 renderList(); renderThread(); $('#c-model').value=curChat().model||'fast';
 (async()=>{try{
