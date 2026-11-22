@@ -1,0 +1,46 @@
+{
+  "name": "awsquick-2api-gateway",
+  "version": "0.1.4",
+  "description": "Lightweight OpenAI-compatible gateway core for AWS Quick",
+  "type": "module",
+  "main": "./index.mjs",
+  "files": [
+    "index.mjs",
+    "lib",
+    "bin",
+    "README.md",
+    "README.zh-CN.md",
+    "PROTOCOL.md",
+    "PROTOCOL.zh-CN.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Trash-Makers/awsquick-2api.git"
+  },
+  "homepage": "https://github.com/httpdone/gateway-aws-quick#readme",
+  "bugs": {
+    "url": "https://github.com/httpdone/gateway-aws-quick/issues"
+  },
+  "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  },
+  "gateway": {
+    "name": "Amazon Quick",
+    "maxConcurrency": 2,
+    "icon": "https://aws.amazon.com/favicon.ico",
+    "summary": {
+      "en": "Your own Amazon Quick account as a provider.",
+      "zh": "用你自己的 Amazon Quick 账号作为模型提供方。"
+    }
+  },
+  "dependencies": {
+    "https-proxy-agent": "^9.1.0",
+    "ws": "^8.23.0"
+  },
+  "private": true
+}
