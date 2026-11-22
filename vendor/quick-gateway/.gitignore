@@ -1,0 +1,6 @@
+node_modules/
+*.log
+.DS_Store
+# reverse-engineering artifacts: extracted proprietary app code + capture scripts
+# (contain device ids / session material — never publish)
+_research/
