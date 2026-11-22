@@ -1,0 +1,27 @@
+awsquick-2api
+Copyright (c) 2026 Trash-Makers
+Licensed under the MIT License. See LICENSE.
+
+--------------------------------------------------------------------
+Third-party components
+--------------------------------------------------------------------
+
+1) Gateway runtime — vendor/quick-gateway/
+   Licensed under the MIT License.
+   The full license text is kept at vendor/quick-gateway/LICENSE.
+   Local modifications: OAuth-only entrypoint (bin/serve-oauth.mjs),
+   optional outbound proxy support, request accounting.
+
+2) Source Han Serif / Noto Serif CJK (static/shs-*.woff2)
+   Copyright 2014-2021 Adobe (http://www.adobe.com/), with Reserved Font
+   Name 'Source'. Licensed under the SIL Open Font License, Version 1.1.
+   Subsetted from the original font for this project's UI.
+   https://github.com/adobe-fonts/source-han-serif
+
+3) ws, https-proxy-agent (vendor/quick-gateway/node_modules)
+   MIT License.
+
+--------------------------------------------------------------------
+No credentials, tokens, account data or personal information are
+included in this repository. Everything under data/ is generated at
+runtime and excluded via .gitignore.
