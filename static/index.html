@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AWS Quick 控制台</title>
+<style>
+@font-face{font-family:'SHS';src:url('/shs-regular.woff2') format('woff2');font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:'SHS';src:url('/shs-bold.woff2') format('woff2');font-weight:700;font-style:normal;font-display:swap}
+
+
+  :root{
+    --bg:#f6f6f4; --surface:#fff; --surface2:#fafaf8;
+    --border:#e7e6e1; --border2:#f0efea;
+    --fg:#0b0b0a; --muted:#6f6f68; --dim:#a3a29a;
+    --ok:#15803d; --okbg:#f0fdf4; --okbd:#bbf7d0;
+    --warn:#a16207; --warnbg:#fefce8; --warnbd:#fef08a;
+    --bad:#b91c1c; --badbg:#fef2f2; --badbd:#fecaca;
+    --info:#1d4ed8; --infobg:#eff6ff; --infobd:#bfdbfe;
+    --serif:"SHS","Source Han Serif SC","Noto Serif CJK SC","Songti SC","SimSun",Georgia,serif;
+    --sans:"SHS","Source Han Serif SC","Noto Serif CJK SC","Songti SC","SimSun",Georgia,serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--sans);
+       font-size:13.5px;line-height:1.6;-webkit-font-smoothing:antialiased}
+  a{color:inherit;text-decoration:none}
+  .wrap{max-width:1280px;margin:0 auto;padding:0 28px}
+
+  /* ---------- 顶栏：黑色胶囊 ---------- */
+  .navwrap{position:sticky;top:0;z-index:30;padding:16px 0 10px;
+           background:linear-gradient(180deg,var(--bg) 70%,#f6f6f400)}
+  .navbar{display:flex;align-items:center;gap:6px;height:56px;padding:0 8px 0 18px;
+          background:#0b0b0a;border-radius:99px;color:#fff;
+          box-shadow:0 18px 40px -24px #0009,0 2px 6px #0002}
+  .brand{display:flex;align-items:center;gap:9px;padding-right:8px}
+  .brand .mk{width:26px;height:26px;border-radius:8px;background:#fff;color:#0b0b0a;
+             display:grid;place-items:center;font-weight:400;font-size:12px}
+  .brand b{font-size:13.5px;font-weight:700;letter-spacing:.1px;white-space:nowrap}
+  .nsep{width:1px;height:20px;background:#ffffff26;margin:0 6px}
+  .navbar nav{display:flex;gap:2px}
+  .navbar nav a{padding:8px 14px;border-radius:99px;font-size:12.5px;color:#ffffffb0;
+                transition:.15s;white-space:nowrap}
+  .navbar nav a:hover{background:#ffffff14;color:#fff}
+  .navbar nav a.on{background:#fff;color:#0b0b0a;font-weight:400}
+  .navsearch{flex:1;max-width:300px;margin:0 10px;height:34px;border-radius:99px;
+             background:#ffffff12;border:1px solid #ffffff1f;display:flex;align-items:center;
+             gap:8px;padding:0 14px;color:#ffffff80;font-size:12px}
+  .navsearch kbd{margin-left:auto;font-family:var(--sans);font-size:10.5px;border:1px solid #ffffff2e;
+                  border-radius:5px;padding:1px 5px;color:#ffffff70}
+  .navright{display:flex;align-items:center;gap:8px;margin-left:auto;padding-right:2px}
+  .dot{width:7px;height:7px;border-radius:99px;background:#ffffff40}
+  .dot.ok{background:#4ade80;box-shadow:0 0 0 3px #4ade8033}
+  .dot.bad{background:#f87171;box-shadow:0 0 0 3px #f8717133}
+  .navpill{display:flex;align-items:center;gap:7px;height:34px;padding:0 12px;border-radius:99px;
+           font-size:11.5px;color:#ffffffb0;background:#ffffff10}
+  .cta{height:40px;padding:0 18px;border-radius:99px;background:#fff;color:#0b0b0a;border:0;
+       font:inherit;font-size:12.5px;font-weight:700;cursor:pointer;transition:.15s;white-space:nowrap}
+  .cta:hover{transform:translateY(-1px);box-shadow:0 8px 20px -8px #fff6}
+
+  /* ---------- hero ---------- */
+  .hero{padding:46px 0 34px;text-align:center}
+  .eyebrow{font-size:10.5px;letter-spacing:1.6px;text-transform:uppercase;color:var(--dim);font-weight:400}
+  .hero h1{font-family:var(--serif);font-size:52px;line-height:1.12;letter-spacing:-.01em;
+           margin:14px 0 14px;font-weight:700}
+  .hero h1 em{font-style:italic;font-weight:700}
+  .hero p{color:var(--muted);font-size:14.5px;max-width:620px;margin:0 auto}
+  .hero .acts{display:flex;gap:10px;justify-content:center;margin-top:24px}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:38px;padding:0 18px;
+       border-radius:99px;border:1px solid var(--border);background:var(--surface);color:var(--fg);
+       font:inherit;font-size:12.5px;font-weight:400;cursor:pointer;transition:.15s}
+  .btn:hover{transform:translateY(-1px);box-shadow:0 8px 18px -12px #0006}
+  .btn.dark{background:#0b0b0a;border-color:#0b0b0a;color:#fff}
+  .btn.dark:hover{background:#1d1d1b}
+  .btn.sm{height:28px;padding:0 11px;font-size:11.5px;font-weight:700}
+  .btn.danger{color:var(--bad);border-color:var(--badbd)}
+  .btn.danger:hover{background:var(--badbg)}
+
+  /* ---------- bento ---------- */
+  .bento{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;margin-bottom:16px}
+  .mod{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:18px 20px;
+       position:relative;overflow:hidden;box-shadow:0 1px 2px #00000006}
+  .mod .lab{font-size:10px;letter-spacing:1.2px;text-transform:uppercase;color:var(--dim);font-weight:400}
+  .mod h2{font-family:var(--serif);font-size:19px;font-weight:700;letter-spacing:.005em;margin:6px 0 0}
+  .mod .hd{display:flex;align-items:flex-start;gap:10px;margin-bottom:14px}
+  .mod .hd .spacer{flex:1}
+  .span2{grid-column:span 2} .span3{grid-column:span 3} .span4{grid-column:span 4} .span6{grid-column:span 6}
+  .stat{font-family:var(--serif);font-size:34px;line-height:1.05;letter-spacing:-.015em;margin-top:8px;font-weight:700;
+        font-variant-numeric:tabular-nums}
+  .stat small{font-family:var(--sans);font-size:12px;color:var(--dim);letter-spacing:0;margin-left:3px}
+  .sub{color:var(--dim);font-size:11.5px;margin-top:4px}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px}
+
+  .badge{display:inline-flex;align-items:center;gap:5px;height:21px;padding:0 9px;border-radius:99px;
+         font-size:10.5px;font-weight:400;border:1px solid var(--border);color:var(--muted);background:var(--surface2)}
+  .badge.ok{color:var(--ok);border-color:var(--okbd);background:var(--okbg)}
+  .badge.bad{color:var(--bad);border-color:var(--badbd);background:var(--badbg)}
+  .badge.warn{color:var(--warn);border-color:var(--warnbd);background:var(--warnbg)}
+  .badge.info{color:var(--info);border-color:var(--infobd);background:var(--infobg)}
+  .badge:before{content:"";width:5px;height:5px;border-radius:99px;background:currentColor;opacity:.7}
+
+  .acctline{display:flex;align-items:center;gap:12px;padding:11px 0;border-top:1px solid var(--border2)}
+  .acctline:first-of-type{border-top:0}
+  .av{width:34px;height:34px;border-radius:11px;background:#0b0b0a;color:#fff;display:grid;place-items:center;
+      font-weight:700;font-size:12px;flex:none}
+  .bar{height:6px;border-radius:99px;background:#efeee9;overflow:hidden}
+  .bar i{display:block;height:100%;border-radius:99px;background:#0b0b0a;transition:width .5s}
+  .bar.hi i{background:#a16207} .bar.max i{background:var(--bad)}
+
+  table{width:100%;border-collapse:collapse}
+  th,td{text-align:left;padding:10px 0;border-bottom:1px solid var(--border2);white-space:nowrap}
+  th{color:var(--dim);font-size:10px;font-weight:400;letter-spacing:1px;text-transform:uppercase}
+  tbody tr:hover{background:#fcfcfa}
+  tbody tr:last-child td{border-bottom:0}
+  td{padding-right:14px;font-size:12.5px}
+
+  select,input{height:34px;padding:0 13px;border-radius:99px;border:1px solid var(--border);
+       background:var(--surface);color:var(--fg);font:inherit;font-size:12.5px;outline:none;transition:.15s}
+  select:focus,input:focus{border-color:#c8c7c0;box-shadow:0 0 0 3px #0000000a}
+
+  .view{display:none} .view.on{display:block}
+  .pagehead{padding:20px 0 22px;display:flex;align-items:flex-end;gap:14px}
+  .pagehead h1{font-family:var(--serif);font-size:34px;font-weight:700;letter-spacing:-.01em;margin:0}
+  .pagehead .sub{margin-top:6px}
+
+  .logs{height:520px;overflow:auto;background:#0b0b0a;color:#e7e5e0;padding:14px 18px;border-radius:14px;
+        font-family:ui-monospace,Menlo,monospace;font-size:11.5px;line-height:1.9}
+  .logs .l{display:flex;gap:10px}
+  .logs .t{color:#57534e} .lv{width:48px;flex:none;text-align:right}
+  .lv.system{color:#c4b5fd} .lv.step{color:#78716c}
+  .lv.ok{color:#86efac} .lv.fail,.lv.error{color:#fca5a5}
+
+  .mask{position:fixed;inset:0;background:#0b0b0a55;backdrop-filter:blur(4px);display:none;place-items:center;z-index:50}
+  .mask.on{display:grid}
+  .modal{width:660px;max-width:92vw;background:var(--surface);border-radius:24px;
+         box-shadow:0 40px 90px -30px #00000055;overflow:hidden}
+  .modal .hd{display:flex;align-items:center;padding:20px 22px;border-bottom:1px solid var(--border2)}
+  .modal .hd h3{margin:0;font-family:var(--serif);font-size:19px;font-weight:700}
+  .modal .bd{padding:20px 22px}
+  .modal textarea{width:100%;min-height:80px;background:var(--surface2);color:var(--fg);border:1px solid var(--border);
+        border-radius:12px;padding:11px;font-family:ui-monospace,Menlo,monospace;font-size:11.5px;resize:vertical;outline:none}
+  .urlbox{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px;
+        font-family:ui-monospace,Menlo,monospace;font-size:11px;word-break:break-all;color:#44403c}
+  .empty{padding:26px 0;text-align:center;color:var(--dim);font-size:12.5px}
+  .toast{position:fixed;right:20px;bottom:20px;background:#0b0b0a;color:#fff;border-radius:99px;
+        padding:11px 18px;font-size:12.5px;opacity:0;transform:translateY(8px);transition:.22s;z-index:80;
+        box-shadow:0 18px 40px -18px #0007}
+  .toast.on{opacity:1;transform:none}
+  @media(max-width:1080px){.bento{grid-template-columns:repeat(2,1fr)}.span3,.span4,.span6{grid-column:span 2}
+    .hero h1{font-size:38px}.navbar nav{display:none}}
+</style>
+<style>
+  .krow{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .codebox{background:#0b0b0a;color:#e7e5e0;border-radius:12px;padding:14px;font-family:ui-monospace,Menlo,monospace;
+           font-size:11.5px;line-height:1.8;overflow:auto;white-space:pre}
+  .swatch{display:inline-block;width:8px;height:8px;border-radius:2px;background:#0b0b0a;margin-right:6px}
+  .col-chart{display:flex;align-items:flex-end;gap:3px;height:110px;margin-top:10px}
+  .col-chart .c{flex:1;background:#e7e6e1;border-radius:3px 3px 0 0;position:relative;min-height:2px}
+  .col-chart .c.on{background:#0b0b0a}
+  .col-chart .c:hover:after{content:attr(data-tip);position:absolute;bottom:110%;left:50%;transform:translateX(-50%);
+      background:#0b0b0a;color:#fff;font-size:10px;padding:3px 7px;border-radius:6px;white-space:nowrap;z-index:5}
+  .kv{display:grid;grid-template-columns:120px 1fr;gap:6px 14px;font-size:12.5px}
+  .kv .k2{color:var(--dim)}
+  .preflight{display:grid;gap:10px}
+  .preflight .item{display:flex;gap:10px;font-size:12.5px;color:var(--muted)}
+  .preflight .item b{color:var(--fg)}
+  .checkline{display:flex;gap:9px;align-items:flex-start;margin-top:14px;font-size:12.5px}
+</style>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 28 28%27%3E%3Crect width=%2728%27 height=%2728%27 rx=%278%27 fill=%27%230b0b0a%27/%3E%3Cpath d=%27M16.6 4.8 L9.2 15.4 h4.9 l-1.7 7.8 7.6-11 h-5.1 z%27 fill=%27white%27/%3E%3C/svg%3E">
+</head>
+
+<body>
+<div class="navwrap"><div class="wrap">
+  <div class="navbar">
+    <div class="brand"><span class="mk" style="background:transparent;padding:0"><svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><rect width="28" height="28" rx="8" fill="#0b0b0a"/><path d="M16.6 4.8 L9.2 15.4 h4.9 l-1.7 7.8 7.6-11 h-5.1 z" fill="#fff"/></svg></span><b>AWS Quick 控制台</b></div>
+    <div class="nsep"></div>
+    <nav>
+      <a href="#dash" data-v="dash" class="on">概览</a>
+      <a href="#accounts" data-v="accounts">账号池</a>
+      <a href="#keys" data-v="keys">密钥</a>
+      <a href="#calls" data-v="calls">调用</a>
+      <a href="#proxies" data-v="proxies">代理</a>
+      <a href="#tasks" data-v="tasks">注册任务</a>
+      <a href="#logs" data-v="logs">日志</a>
+      <a href="#settings" data-v="settings">设置</a>
+    </nav>
+    <div class="navsearch">搜索…<kbd>⌘K</kbd></div>
+    <div class="navright">
+      <a class="navpill" href="https://github.com/Trash-Makers/awsquick-2api" target="_blank" rel="noopener" title="GitHub 仓库" style="text-decoration:none"><svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.4 7.4 0 0 1 2-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg><span>GitHub</span></a>
+      <div class="navpill"><span class="dot" id="d-proxy"></span><span id="t-proxy">反代</span></div>
+      <button class="cta" id="start">开始注册 →</button>
+    </div>
+  </div>
+</div></div>
+
+<div class="wrap">
+  <!-- 概览 -->
+  <section class="view on" id="v-dash">
+    <div class="hero" style="padding:38px 0 26px">
+      <div class="eyebrow">AWS QUICK · OPENAI 兼容网关</div>
+      <h1 style="font-size:44px">把 AWS Quick，<em>变成 OpenAI 接口。</em></h1>
+      <p>将 AWS Quick 的服务转换为 OpenAI 兼容格式：一条 base_url 即可接入任何支持 OpenAI 协议的客户端。附带注册机，新号注册完成后一键导入号池。</p>
+      <div class="acts">
+        <button class="btn dark" onclick="location.hash='#keys'">生成接入密钥</button>
+        <button class="btn" onclick="location.hash='#calls'">查看调用明细</button>
+      </div>
+    </div>
+
+    <div class="bento">
+      <div class="mod span2"><div class="lab">Today · Calls</div><div class="stat" id="d-today">0</div><div class="sub">今日调用</div></div>
+      <div class="mod span2"><div class="lab">Today · Cost</div><div class="stat" id="d-cost">$0</div><div class="sub" id="d-cost-sub">今日成本</div></div>
+      <div class="mod span1"><div class="lab">Accounts</div><div class="stat" id="d-acct">0</div><div class="sub">在线</div></div>
+      <div class="mod span1"><div class="lab">Quota</div><div class="stat" id="d-hours">0<small>h</small></div><div class="sub" id="d-hours-sub">—</div></div>
+
+      <div class="mod span4">
+        <div class="hd"><div><div class="lab">Cost · 24h</div><h2>成本分布</h2></div>
+          <div class="spacer"></div><span class="sub" id="d-cost-tip">按小时</span></div>
+        <div class="col-chart" id="d-colchart"></div>
+      </div>
+
+      <div class="mod span2">
+        <div class="hd"><div><div class="lab">Accounts</div><h2>额度占用</h2></div></div>
+        <div id="d-accts"></div>
+      </div>
+
+      <div class="mod span6">
+        <div class="hd"><div><div class="lab">Recent</div><h2>最近调用</h2></div>
+          <div class="spacer"></div><button class="btn sm" onclick="location.hash='#calls'">全部</button></div>
+        <table><thead><tr><th>时间</th><th>账号</th><th>模型</th><th>tokens</th><th>成本</th><th>耗时</th></tr></thead>
+        <tbody id="d-calls"></tbody></table>
+      </div>
+    </div>
+  </section>
+
+  <!-- 账号池 -->
+  <section class="view" id="v-accounts">
+    <div class="pagehead"><div><h1>账号池</h1><div class="sub">额度、熔断状态与调用量</div></div>
+      <div style="flex:1"></div><button class="btn dark" id="add-acct">授权 / 手动导入</button></div>
+    <div class="mod">
+      <table><thead><tr><th>账号</th><th>状态</th><th style="width:200px">额度</th><th>调用</th><th>成本</th><th style="text-align:right">操作</th></tr></thead>
+      <tbody id="a-rows"></tbody></table>
+    </div>
+  </section>
+
+  <!-- 密钥 -->
+  <section class="view" id="v-keys">
+    <div class="pagehead"><div><h1>接入密钥</h1><div class="sub">给外部平台用的 API Key，形如 qk_…</div></div></div>
+    <div class="bento">
+      <div class="mod span3">
+        <div class="hd"><div><div class="lab">Create</div><h2>新建密钥</h2></div></div>
+        <div style="display:flex;gap:8px">
+          <input id="k-name" placeholder="用途，例如 我的平台" style="flex:1">
+          <button class="btn dark" id="k-create">生成</button>
+        </div>
+        <div id="k-new" style="margin-top:14px"></div>
+      </div>
+      <div class="mod span3">
+        <div class="hd"><div><div class="lab">Usage</div><h2>如何接入</h2></div></div>
+        <div class="codebox" id="k-sample">from openai import OpenAI
+
+client = OpenAI(
+    base_url="http://127.0.0.1:3426/v1",
+    api_key="qk_xxxxxxxxxxxxxxxx",
+)
+resp = client.chat.completions.create(
+    model="fast",            # fast | balanced | smart | advanced
+    messages=[{"role": "user", "content": "hi"}],
+)</div>
+        <div class="sub" style="margin-top:10px">也支持 <span class="mono">?key=qk_…</span> 查询参数方式。</div>
+      </div>
+    </div>
+    <div class="mod">
+      <div class="hd"><div><div class="lab">Keys</div><h2>已签发</h2></div></div>
+      <table><thead><tr><th>名称</th><th>前缀</th><th>创建时间</th><th>调用次数</th><th>最近使用</th><th style="text-align:right">操作</th></tr></thead>
+      <tbody id="k-rows"></tbody></table>
+    </div>
+  </section>
+
+  <!-- 调用明细 -->
+  <section class="view" id="v-calls">
+    <div class="pagehead"><div><h1>调用明细</h1><div class="sub" id="c-sub">—</div></div>
+      <div style="flex:1"></div><button class="btn" onclick="loadCalls()">刷新</button></div>
+    <div class="mod">
+      <table><thead><tr><th>时间</th><th>账号</th><th>模型（实际）</th><th>prompt</th><th>completion</th><th>成本</th><th>耗时</th><th>状态</th></tr></thead>
+      <tbody id="c-rows"></tbody></table>
+    </div>
+  </section>
+
+
+  <!-- 代理 -->
+  <section class="view" id="v-proxies">
+    <div class="pagehead"><div><h1>出站代理</h1><div class="sub">注册与反代各自独立配置，可以只开一边</div></div></div>
+    <div class="bento">
+      <div class="mod span3">
+        <div class="hd"><div><div class="lab">Registration</div><h2>注册代理</h2></div>
+          <div class="spacer"></div><span class="badge" id="px-reg-badge">—</span>
+          <button class="btn sm" id="px-reg-toggle" style="margin-left:8px">开关</button></div>
+        <div style="display:grid;gap:8px;margin-bottom:12px">
+          <input id="px-reg-url" placeholder="http://user:pass@host:port">
+          <input id="px-reg-note" placeholder="备注，例如 美国住宅 01">
+          <button class="btn dark" id="px-reg-add">添加到注册代理</button>
+        </div>
+        <table><thead><tr><th>地址</th><th>备注</th><th>状态</th><th style="text-align:right"></th></tr></thead>
+        <tbody id="px-reg-rows"></tbody></table>
+      </div>
+      <div class="mod span3">
+        <div class="hd"><div><div class="lab">Gateway</div><h2>反代代理</h2></div>
+          <div class="spacer"></div><span class="badge" id="px-gw-badge">—</span>
+          <button class="btn sm" id="px-gw-toggle" style="margin-left:8px">开关</button></div>
+        <div style="display:grid;gap:8px;margin-bottom:12px">
+          <input id="px-gw-url" placeholder="http://user:pass@host:port">
+          <input id="px-gw-note" placeholder="备注，例如 出口 A">
+          <button class="btn dark" id="px-gw-add">添加到反代代理</button>
+        </div>
+        <table><thead><tr><th>地址</th><th>备注</th><th>状态</th><th style="text-align:right"></th></tr></thead>
+        <tbody id="px-gw-rows"></tbody></table>
+      </div>
+    </div>
+    <div class="mod">
+      <div class="hd"><div><div class="lab">Notes</div><h2>说明</h2></div></div>
+      <div class="bd kv" style="grid-template-columns:150px 1fr">
+        <div class="k2">注册代理</div><div>只影响注册时的浏览器出口；按任务顺序轮询，写进任务记录</div>
+        <div class="k2">反代代理</div><div>只影响转发到 AWS 的 WebSocket 出口；按请求轮询</div>
+        <div class="k2">两边都关</div><div>全部直连，直连也能用，只是风险更高</div>
+        <div class="k2">协议</div><div>注册支持 http / socks5；反代只支持 http / https</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 注册任务 -->
+  <section class="view" id="v-tasks">
+    <div class="pagehead"><div><h1>注册任务</h1><div class="sub" id="t-sub">—</div></div>
+      <div style="flex:1"></div>
+      <select id="f-state"><option value="">全部状态</option><option value="account_active">成功</option>
+        <option value="blocked">blocked</option><option value="verify_failed">verify_failed</option>
+        <option value="created">待执行</option></select>
+      <input id="f-q" placeholder="搜索邮箱" style="width:190px;margin-left:8px">
+      <button class="btn dark" id="start2" style="margin-left:8px">开始注册</button>
+    </div>
+    <div class="mod">
+      <table><thead><tr><th>#</th><th>账号</th><th>密码</th><th>注册</th><th>号池</th><th>失败原因</th><th>耗时</th><th>重试</th><th style="text-align:right"></th></tr></thead>
+      <tbody id="t-rows"></tbody></table>
+    </div>
+  </section>
+
+  <!-- 日志 -->
+  <section class="view" id="v-logs">
+    <div class="pagehead"><div><h1>运行日志</h1><div class="sub">实时事件流</div></div>
+      <div style="flex:1"></div>
+      <select id="f-level"><option value="">全部</option><option>system</option><option>step</option><option>ok</option><option>fail</option></select>
+      <button class="btn sm" id="clear-log" style="margin-left:8px">清屏</button></div>
+    <div class="logs" id="logs"></div>
+  </section>
+
+  <!-- 设置 -->
+  <section class="view" id="v-settings">
+    <div class="pagehead"><div><h1>设置</h1><div class="sub">首次部署在这里填，改完立即生效（端口类需重启）</div></div>
+      <div style="flex:1"></div><button class="btn dark" id="set-save">保存配置</button></div>
+
+    <div class="bento">
+      <div class="mod span3">
+        <div class="hd"><div><div class="lab">Mail</div><h2>收信配置</h2></div></div>
+        <div style="display:grid;gap:10px">
+          <label class="sub">收信方式
+            <select id="set-provider" style="width:100%;margin-top:6px">
+              <option value="cloudflare">Cloudflare Email Routing + Worker（推荐）</option>
+              <option value="custom">其它邮箱项目的 HTTP 接口</option>
+              <option value="manual">手动邮箱池（自己准备多个邮箱，逐个注册）</option>
+            </select></label>
+          <div id="cfg-domain">
+            <label class="sub">邮箱域名（用于注册，如 your-domain.com）
+              <input id="set-domain" style="width:100%;margin-top:6px" placeholder="your-domain.com"></label>
+          </div>
+          <div id="cfg-cf">
+            <label class="sub">Cloudflare Worker 地址
+              <input id="set-worker" style="width:100%;margin-top:6px" placeholder="https://xxx.workers.dev"></label>
+            <label class="sub" style="display:block;margin-top:10px">Worker API Token
+              <input id="set-token" type="password" autocomplete="off" style="width:100%;margin-top:6px" placeholder="与 Worker 里一致"></label>
+          </div>
+          <div id="cfg-custom" style="display:none">
+            <label class="sub">取信接口（用 {to} 和 {token} 占位，返回 {"code":"123456"})
+              <input id="set-custom" style="width:100%;margin-top:6px" placeholder="https://api.example.com/mail?to={to}&token={token}"></label>
+            <label class="sub" style="display:block;margin-top:10px">接口密钥（替换 {token}）
+              <input id="set-token2" type="password" autocomplete="off" style="width:100%;margin-top:6px"></label>
+          </div>
+          <div id="cfg-manual" style="display:none">
+            <label class="sub">邮箱池（每行一个，格式 <span class="mono">邮箱,密码</span>，密码可留空）
+              <textarea id="set-manual" style="width:100%;min-height:120px;margin-top:6px;background:var(--surface2);
+                border:1px solid var(--border);border-radius:12px;padding:10px;font-family:ui-monospace,Menlo,monospace;
+                font-size:11.5px;outline:none" placeholder="alice@your-domain.com,Passw0rd!
+bob@your-domain.com"></textarea></label>
+            <div class="sub" style="margin-top:8px">这些邮箱会被逐条拿去注册；跑完自动跳过已用过的。</div>
+          </div>
+        </div>
+        <div class="sub" id="cfg-cf-hint" style="margin-top:12px;line-height:1.9">
+          域名需托管在 Cloudflare，并开启 Email Routing 的 catch-all → 该 Worker。<br>
+          公共临时邮箱域名会被 AWS 直接拒绝（ERR-837）。
+        </div>
+        <div class="sub" id="cfg-manual-hint" style="display:none;margin-top:12px;line-height:1.9">
+          注册跑到验证码那步会停下，你到对应邮箱取码，在「注册任务」里填入即可继续。<br>
+          跑完这个号还需要过一次授权才能进池。
+        </div>
+      </div>
+
+      <div class="mod span3">
+        <div class="hd"><div><div class="lab">Service</div><h2>服务与额度</h2></div></div>
+        <div style="display:grid;gap:10px">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <label class="sub">面板端口<input id="set-panel-port" type="number" style="width:100%;margin-top:6px"></label>
+            <label class="sub">网关端口<input id="set-gw-port" type="number" style="width:100%;margin-top:6px"></label>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <label class="sub">默认并发<input id="set-conc" type="number" min="1" max="8" style="width:100%;margin-top:6px"></label>
+            <label class="sub">默认目标<input id="set-target" type="number" min="1" style="width:100%;margin-top:6px"></label>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <label class="sub">单任务超时（秒）<input id="set-timeout" type="number" min="60" style="width:100%;margin-top:6px"></label>
+            <label class="sub">失败重试次数<input id="set-retries" type="number" min="0" max="5" style="width:100%;margin-top:6px"></label>
+          </div>
+          <label class="sub">无头模式（不弹出浏览器窗口）
+            <select id="set-headless" style="width:100%;margin-top:6px">
+              <option value="true">开启（推荐）</option><option value="false">关闭（可肉眼观察）</option></select></label>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <label class="sub">额度预警（%）<input id="set-warn" type="number" min="10" max="99" style="width:100%;margin-top:6px"></label>
+            <label class="sub">额度熔断（%）<input id="set-quota" type="number" min="50" max="100" style="width:100%;margin-top:6px"></label>
+          </div>
+        </div>
+        <div class="sub" style="margin-top:12px">端口改动需要重启面板与网关才生效。</div>
+      </div>
+
+      <div class="mod span3">
+        <div class="hd"><div><div class="lab">Gateway</div><h2>网关行为</h2></div></div>
+        <div style="display:grid;gap:10px">
+          <label class="sub">默认模型（请求未指定时使用）
+            <select id="set-defmodel" style="width:100%;margin-top:6px">
+              <option value="fast">fast（Haiku，最便宜）</option>
+              <option value="balanced">balanced</option>
+              <option value="smart">smart（Opus，约 45 倍成本）</option>
+              <option value="advanced">advanced</option></select></label>
+          <label class="sub">单次最大 tokens
+            <input id="set-maxtokens" type="number" min="256" style="width:100%;margin-top:6px"></label>
+          <label class="sub">允许流式返回
+            <select id="set-stream" style="width:100%;margin-top:6px">
+              <option value="true">允许</option><option value="false">禁用（强制非流式）</option></select></label>
+        </div>
+        <div class="sub" style="margin-top:12px">成本提示：fast 约 $0.0046/次，smart（Opus）约 $0.205/次。</div>
+      </div>
+
+      <div class="mod span3">
+        <div class="hd"><div><div class="lab">Danger</div><h2>数据</h2></div></div>
+        <div style="display:grid;gap:10px">
+          <button class="btn danger" id="clear-tasks">清空任务与日志</button>
+          <a class="btn" href="/api/export.csv">导出账号 CSV</a>
+        </div>
+        <div class="sub" style="line-height:1.9;margin-top:10px">
+          会话 <span class="mono">data/oauth/oauth-sessions.json</span><br>
+          密钥 <span class="mono">data/keys.json</span> · 账本 <span class="mono">data/calls.jsonl</span>
+        </div>
+      </div>
+
+      <div class="mod span3">
+        <div class="hd"><div><div class="lab">About</div><h2>关于</h2></div></div>
+        <div class="sub" style="line-height:2">
+          <b>AWS Quick 控制台</b> 把 AWS Quick 的服务转换为 OpenAI 兼容格式，
+          一条 <span class="mono">base_url</span> 就能接入任何支持 OpenAI 协议的客户端。<br>
+          附带注册机：新号注册完成后可在「注册任务」里一键导入号池。<br>
+          仓库：<a class="mono" href="https://github.com/Trash-Makers/awsquick-2api" target="_blank" rel="noopener"
+            style="text-decoration:underline">Trash-Makers/awsquick-2api</a><br>
+          作者：<b>Trash-Makers</b> · MIT License
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<!-- 新增账号 -->
+<div class="mask" id="mask"><div class="modal">
+  <div class="hd"><h3>新增账号</h3><div style="flex:1"></div><button class="btn sm" id="m-close">关闭</button></div>
+  <div class="bd">
+    <div class="kv" style="margin-bottom:14px;grid-template-columns:70px 1fr">
+      <div class="k2">账号</div><div class="mono" id="m-email">—</div>
+      <div class="k2">密码</div><div class="mono"><span id="m-pass">—</span>
+        <button class="btn sm" style="margin-left:8px;padding:0 8px" id="m-copypass">复制</button></div>
+    </div>
+    <details style="margin-bottom:14px">
+      <summary class="sub" style="cursor:pointer">手动导入已有账号（登记邮箱和密码，便于以后查看）</summary>
+      <div style="display:grid;gap:8px;margin-top:10px">
+        <input id="m-in-email" placeholder="已有账号的邮箱">
+        <input id="m-in-pass" placeholder="该账号密码（可留空）">
+      </div>
+    </details>
+    <div class="sub" style="margin-bottom:8px">1 · 打开下面地址完成登录（含人机验证）</div>
+    <div class="urlbox" id="m-url">生成中…</div>
+    <div class="sub" style="margin:16px 0 8px">2 · 把地址栏里带 <span class="mono">?code=</span> 的完整 URL 粘贴回来</div>
+    <textarea id="m-paste" placeholder="http://127.0.0.1:xxxxx/?code=..."></textarea>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button class="btn dark" id="m-submit">完成授权</button>
+      <button class="btn" id="m-copy">复制地址</button>
+      <button class="btn" id="m-regen">重新生成</button></div>
+    <div class="sub" style="margin-top:10px">授权地址有效期约 10 分钟；过期或报错就点「重新生成」。</div>
+  </div>
+</div></div>
+
+<!-- 开始注册前的确认 -->
+<div class="mask" id="pf"><div class="modal">
+  <div class="hd"><h3>开始注册前，请确认</h3><div style="flex:1"></div><button class="btn sm" id="pf-close">关闭</button></div>
+  <div class="bd">
+    <div class="preflight">
+      <div class="item"><b>1</b><span>邮箱域名可用：当前 <span class="mono" id="pf-domain">未配置</span>，已验证能过 AWS 域名闸门。</span></div>
+      <div class="item"><b>2</b><span>收信链路在线：Cloudflare catch-all → Worker → KV，验证码可自动读取。</span></div>
+      <div class="item"><b>3</b><span>每个账号会真实消耗一个邮箱地址，并在 <span class="mono">data/accounts.jsonl</span> 留下记录。</span></div>
+      <div class="item"><b>4</b><span>半自动模式下，每个号需要你人工过一次 AWS 人机验证；全自动模式尚未启用。</span></div>
+      <div class="item"><b>5</b><span>同一出口 IP 连续注册有被关联的风险，建议先用 1~3 个号验证。</span></div>
+    </div>
+    <label class="checkline"><input type="checkbox" id="pf-ok" style="height:16px;width:16px;border-radius:4px">
+      <span>我已确认以上条件，开始执行</span></label>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="btn dark" id="pf-go" disabled>开始</button>
+      <button class="btn" id="pf-cancel">取消</button></div>
+  </div>
+</div></div>
+
+
+<div class="mask" id="ob"><div class="modal" style="width:700px">
+  <div class="hd"><h3>欢迎使用 AWS Quick 控制台</h3><div style="flex:1"></div>
+    <button class="btn sm" id="ob-close">跳过</button></div>
+  <div class="bd">
+    <div class="sub" style="margin-bottom:14px">四步把这个控制台跑起来。每步都能在顶部导航找到对应页面。</div>
+    <div class="preflight">
+      <div class="item"><b>1</b><span><b>填配置</b>：设置 → 收信配置，填邮箱域名、Worker 地址和 Token。保存即生效。</span></div>
+      <div class="item"><b>2</b><span><b>授权第一个号</b>：账号池 → 新增账号 → 浏览器登录（过一次人机验证）→ 粘贴回调地址。</span></div>
+      <div class="item"><b>3</b><span><b>生成密钥</b>：密钥 → 生成，得到 <span class="mono">qk_…</span>，只显示一次。</span></div>
+      <div class="item"><b>4</b><span><b>接入</b>：把 base_url 指向本网关的 <span class="mono">/v1</span>，用 OpenAI SDK 直接调用。</span></div>
+    </div>
+    <div class="sub" style="margin-top:14px;line-height:1.9">
+      注册机是可选项：注册成功的号会在「注册任务」里显示，<b>导入号池</b>需要再授权一次。
+    </div>
+    <label class="checkline"><input type="checkbox" id="ob-off" style="height:16px;width:16px;border-radius:4px">
+      <span>以后不再自动显示</span></label>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="btn dark" id="ob-go">开始使用</button>
+      <button class="btn" onclick="location.hash='#settings';document.getElementById('ob').classList.remove('on')">去设置</button>
+    </div>
+  </div>
+</div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const esc=s=>(s??'').toString().replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const toast=m=>{const t=$('#toast');t.textContent=m;t.classList.add('on');setTimeout(()=>t.classList.remove('on'),2300)};
+const money=v=>'$'+(v||0).toFixed(4);
+const tstr=ts=>new Date(ts).toTimeString().slice(0,5);
+
+function route(){
+  const v=(location.hash||'#dash').slice(1)||'dash';
+  $$('.view').forEach(e=>e.classList.remove('on'));
+  ($('#v-'+v)||$('#v-dash')).classList.add('on');
+  $$('.navbar nav a').forEach(a=>a.classList.toggle('on',a.dataset.v===v));
+  if(v==='keys') loadKeys();
+  if(v==='calls') loadCalls();
+  if(v==='proxies') loadProxies();
+}
+addEventListener('hashchange',route); route();
+
+let ACC=[], ST={}, POOLED=new Set(), PX={};
+const FAIL_HINTS={
+  otp_timeout:['验证码超时','没在时限内收到或取到验证码。检查 Worker 是否在线、域名 catch-all 是否生效，稍后重试。'],
+  fingerprint_flag:['设备指纹被标记','AWS 判定环境异常。换一条代理、降低频率，或换浏览器指纹后重试。'],
+  blocked:['被风控拦截','请求被 AWS 拦截（TES/WAF）。多半是 IP 或频率问题，换代理再试。'],
+  captcha_stuck:['人机验证未过','半自动模式下需要人工完成验证；全自动需要打码服务。'],
+  pow_stuck:['工作量证明失败','前端校验未完成，通常是页面加载不完整，重试即可。'],
+  unknown_error:['未分类错误','看该任务的运行日志（data/runs/<时间>/task-N.log）定位。'],
+  panel_restart:['面板重启中断','任务执行时面板被重启。直接重试即可。'],
+  verify_failed:['验证失败','同上，查看运行日志确认卡在哪一步。'],
+};
+async function loadProxy(){
+  try{
+    const d=await (await fetch('/api/proxy')).json();
+    ACC=d.accounts?.accounts||[]; ST=d.stats||{};
+    POOLED=new Set(ACC.map(a=>(a.email||'').toLowerCase()));
+    $('#d-proxy').className='dot ok'; $('#t-proxy').textContent=ACC.length+' 号';
+    $('#d-today').textContent=ST.today?.calls||0;
+    $('#d-cost').textContent=money(ST.today?.cost||0);
+    $('#d-cost-sub').textContent='累计 '+money(ST.cost||0);
+    $('#d-acct').textContent=ACC.length;
+    let used=0,lim=0;
+    ACC.forEach(a=>{if(a.quota){used+=a.quota.used;lim+=a.quota.limit}});
+    $('#d-hours').innerHTML=used.toFixed(2)+'<small>h</small>';
+    $('#d-hours-sub').textContent='上限 '+lim+' h';
+
+    // 成本柱状
+    const ch=ST.cost_hour||[], max=Math.max(...ch,0.0001);
+    $('#d-colchart').innerHTML=ch.map((v,i)=>`<div class="c ${v>0?'on':''}" style="height:${Math.max(2,v/max*100)}%"
+      data-tip="${i}:00 · ${money(v)}"></div>`).join('');
+
+    $('#d-accts').innerHTML=ACC.length?ACC.map(a=>{
+      const q=a.quota||{used:0,limit:1}; const p=Math.min(100,Math.round(q.used/q.limit*100));
+      return `<div class="acctline"><div class="av">${esc((a.email||'?')[0].toUpperCase())}</div>
+        <div style="flex:1;min-width:0"><div class="mono" style="overflow:hidden;text-overflow:ellipsis">${esc(a.email)}</div>
+          <div class="sub">${a.dead?'<span style="color:var(--bad)">停用</span>':'可用'} · ${q.used.toFixed(2)}/${q.limit}h</div></div>
+        <div style="width:70px"><div class="bar ${p>85?'max':p>60?'hi':''}"><i style="width:${p}%"></i></div></div></div>`
+    }).join(''):'<div class="empty">还没有账号</div>';
+
+    $('#a-rows').innerHTML=ACC.length?ACC.map(a=>{
+      const q=a.quota||{used:0,limit:1}; const p=Math.min(100,Math.round(q.used/q.limit*100));
+      const st=(ST.by_account||{})[a.email]||{};
+      return `<tr><td><div class="mono">${esc(a.email)}</div><div class="sub">${esc(a.key)}</div></td>
+        <td><span class="badge ${a.dead?'bad':'ok'}">${a.dead?'停用':'可用'}</span></td>
+        <td><div class="sub">${q.used.toFixed(2)} / ${q.limit} h</div>
+          <div class="bar ${p>85?'max':p>60?'hi':''}" style="margin-top:5px"><i style="width:${p}%"></i></div></td>
+        <td class="mono">${st.calls||0}</td><td class="mono">${money(st.cost||0)}</td>
+        <td style="text-align:right"><button class="btn sm" onclick="testAcct()">测试</button>
+          <button class="btn sm danger" style="margin-left:6px" onclick="delAcct('${esc(a.key)}')">移除</button></td></tr>`
+    }).join(''):'<tr><td colspan="6" class="empty">没有账号</td></tr>';
+  }catch(e){ $('#d-proxy').className='dot bad'; $('#t-proxy').textContent='离线'; }
+}
+
+async function loadCalls(){
+  const d=await (await fetch('/api/proxy/calls?limit=80')).json();
+  const rows=d.calls||[];
+  $('#c-sub').textContent=rows.length+' 条（最多显示 80）';
+  $('#c-rows').innerHTML=rows.length?rows.map(c=>`<tr>
+    <td class="mono" style="color:var(--dim)">${new Date(c.ts).toLocaleString('zh-CN',{hour12:false}).slice(5)}</td>
+    <td class="mono">${esc(c.account||'—')}</td>
+    <td class="mono">${esc(c.model||'')}<span class="dim"> ${esc((c.resolved||'').replace('us.anthropic.',''))}</span></td>
+    <td class="mono">${(c.prompt_tokens||0).toLocaleString()}</td>
+    <td class="mono">${c.completion_tokens||0}</td>
+    <td class="mono">${money(c.cost)}</td>
+    <td class="mono">${c.ms||0}ms</td>
+    <td><span class="badge ${c.status===200?'ok':'bad'}">${c.status}</span></td></tr>`).join('')
+    :'<tr><td colspan="8" class="empty">还没有调用</td></tr>';
+  const d2=await (await fetch('/api/proxy')).json();
+  const st=d2.stats||{};
+  $('#d-calls').innerHTML=(st.per_account||[]).length?(await (await fetch('/api/proxy/calls?limit=8')).json()).calls.map(c=>`<tr>
+    <td class="mono" style="color:var(--dim)">${new Date(c.ts).toLocaleTimeString('zh-CN',{hour12:false})}</td>
+    <td class="mono">${esc(c.account||'—')}</td><td class="mono">${esc(c.model||'')}</td>
+    <td class="mono">${(c.total_tokens||0).toLocaleString()}</td><td class="mono">${money(c.cost)}</td>
+    <td class="mono">${c.ms||0}ms</td></tr>`).join(''):'';
+}
+
+async function loadKeys(){
+  const d=await (await fetch('/api/proxy/keys')).json();
+  const rows=d.keys||[];
+  $('#k-rows').innerHTML=rows.length?rows.map(k=>`<tr>
+    <td>${esc(k.name)}</td><td class="mono">${esc(k.prefix)}</td>
+    <td class="mono" style="color:var(--dim)">${new Date(k.created).toLocaleDateString('zh-CN')}</td>
+    <td class="mono">${k.calls||0}</td>
+    <td class="mono" style="color:var(--dim)">${k.last_used?new Date(k.last_used).toLocaleTimeString('zh-CN',{hour12:false}):'—'}</td>
+    <td style="text-align:right"><button class="btn sm danger" onclick="delKey('${esc(k.id)}')">撤销</button></td></tr>`).join('')
+    :'<tr><td colspan="6" class="empty">还没有密钥（未签发时本机可直连）</td></tr>';
+}
+
+async function loadStats(){
+  const s=await (await fetch('/api/stats')).json();
+  $('#t-sub')&&($('#t-sub').textContent=s.total+' 条记录');
+  $('#nav-task')&&($('#nav-task').textContent=s.total);
+  $('#nav-acct')&&($('#nav-acct').textContent=ACC.length);
+}
+
+async function loadTasks(){
+  const state=$('#f-state')?.value||'', q=($('#f-q')?.value||'').toLowerCase();
+  let rows=await (await fetch('/api/tasks?limit=300'+(state?'&state='+state:''))).json();
+  if(q) rows=rows.filter(r=>r.email.toLowerCase().includes(q));
+  const regBadge=r=>{
+    const map={registered:['warn','已注册'],pooled:['ok','已入池'],account_active:['ok','可调用'],
+      blocked:['bad','blocked'],verify_failed:['bad','verify_failed'],created:['info','待执行']};
+    const [cls,txt]=map[r.state]||['info',r.state];
+    return `<span class="badge ${cls}">${txt}</span>`;
+  };
+  $('#t-rows').innerHTML=rows.map(r=>{
+    const pooled=POOLED.has((r.email||'').toLowerCase());
+    return `<tr><td class="mono" style="color:var(--dim)">${r.id}</td>
+    <td class="mono">${esc(r.email)}${r.state==='waiting_otp'
+      ? `<div style="margin-top:6px;display:flex;gap:6px">
+           <input id="otp-${r.id}" placeholder="6 位验证码" style="height:28px;width:110px;font-size:11.5px">
+           <button class="btn sm" onclick="submitOtp(${r.id})">提交</button></div>`:''}</td>
+    <td class="mono"><span style="color:var(--dim)">${esc(r.password||'—')}</span>
+      ${r.password?`<button class="btn sm" style="margin-left:6px;padding:0 7px" onclick="copyText('${esc(r.password)}')">复制</button>`:''}</td>
+    <td>${regBadge(r)}</td>
+    <td>${pooled
+      ? '<span class="badge ok">● 可调用</span>'
+      : '<span class="badge" style="color:var(--dim)">○ 未入池</span>'}</td>
+    <td class="sub" style="white-space:normal;max-width:420px">${r.fail_reason
+      ? `<div>${esc(FAIL_HINTS[r.fail_reason]?.[0]||r.fail_reason)}</div>
+         <div style="color:var(--dim);font-size:11px;line-height:1.6">${esc(FAIL_HINTS[r.fail_reason]?.[1]||'')}</div>`
+      : '—'}</td>
+    <td class="mono">${r.duration_ms?((r.duration_ms/1000).toFixed(1)+'s'):'—'}</td>
+    <td class="mono" style="color:var(--dim)">${r.retries}</td>
+    <td style="text-align:right">${
+      pooled ? '' :
+      r.state==='registered' ? `<button class="btn sm" onclick="importAcct('${esc(r.email)}')">导入号池</button>` :
+      ['blocked','verify_failed','dead','interrupted'].includes(r.state) ? `<button class="btn sm" onclick="retry(${r.id})">重试</button>` : ''
+    }</td></tr>`}).join('')
+    ||'<tr><td colspan="9" class="empty">还没有任务</td></tr>';
+}
+
+async function loadScope(scope){
+  const d=await (await fetch('/api/proxies?scope='+scope)).json();
+  const pre=scope==='registration'?'reg':'gw';
+  const badge=$('#px-'+pre+'-badge');
+  badge.textContent=d.enabled?'已开启':'已关闭';
+  badge.className='badge '+(d.enabled?'ok':'');
+  const rows=d.list||[];
+  $('#px-'+pre+'-rows').innerHTML=rows.length?rows.map(p=>`<tr>
+    <td class="mono" style="max-width:240px;overflow:hidden;text-overflow:ellipsis">${esc(p.url)}</td>
+    <td class="sub">${esc(p.note||'—')}</td>
+    <td><span class="badge ${p.enabled?'ok':''}">${p.enabled?'启用':'停用'}</span></td>
+    <td style="text-align:right"><button class="btn sm" onclick="toggleProxy('${scope}','${esc(p.url)}')">切换</button>
+      <button class="btn sm danger" style="margin-left:5px" onclick="delProxy('${scope}','${esc(p.url)}')">删除</button></td></tr>`).join('')
+    :'<tr><td colspan="4" class="empty">还没有代理</td></tr>';
+}
+function loadProxies(){ loadScope('registration'); loadScope('gateway'); }
+
+async function toggleProxy(scope,url){
+  await fetch('/api/proxies/toggle',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({scope,url})});
+  loadScope(scope); refreshGatewayProxies();
+}
+async function delProxy(scope,url){
+  if(!confirm('删除这条代理？'))return;
+  await fetch(`/api/proxies?scope=${scope}&url=`+encodeURIComponent(url),{method:'DELETE'});
+  loadScope(scope); refreshGatewayProxies();
+}
+async function toggleScope(scope,on){
+  await fetch('/api/proxies/toggle',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({scope,global:true,value:on})});
+  loadScope(scope); refreshGatewayProxies(); toast(on?'已开启':'已关闭');
+}
+async function addProxy(scope){
+  const pre=scope==='registration'?'reg':'gw';
+  const url=$('#px-'+pre+'-url').value.trim(); if(!url)return toast('请填代理地址');
+  const r=await (await fetch('/api/proxies',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({scope,url,note:$('#px-'+pre+'-note').value.trim()})})).json();
+  if(r.ok){$('#px-'+pre+'-url').value='';$('#px-'+pre+'-note').value='';loadScope(scope);refreshGatewayProxies();toast('已添加')}
+  else toast(r.error||'添加失败');
+}
+async function refreshGatewayProxies(){
+  try{ await fetch('/api/proxy/reload',{method:'POST'}); }catch(e){}
+}
+
+function copyText(t){navigator.clipboard?.writeText(t);toast('已复制')}
+async function submitOtp(id){
+  const code=($('#otp-'+id).value||'').trim();
+  if(!code)return toast('请输入验证码');
+  const r=await (await fetch('/api/otp',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({task:id,code})})).json();
+  toast(r.ok?'已提交':'提交失败'); loadTasks();
+}
+function importAcct(email){
+  const t=(TASKS||[]).find(x=>(x.email||'')===email)||{};
+  $('#mask').classList.add('on');
+  $('#m-email').textContent=email;
+  $('#m-pass').textContent=t.password||'（未记录）';
+  $('#m-copypass').onclick=()=>copyText(t.password||'');
+  $('#m-url').textContent='生成授权地址…';
+  $('#m-paste').value='';
+  fetch('/api/proxy/login',{method:'POST'}).then(r=>r.json()).then(r=>{
+    $('#m-url').textContent=r.url||('失败');
+    $('#m-url').dataset.email=email;
+    toast('登录时请使用 '+email);
+  });
+}
+const retry=id=>fetch('/api/retry/'+id,{method:'POST'}).then(()=>{toast('已加入队列');loadTasks()});
+const delAcct=key=>{if(!confirm('移除该账号？'))return;
+  fetch('/api/proxy/accounts/'+encodeURIComponent(key.replace('…','')),{method:'DELETE'})
+    .then(()=>{toast('已移除');loadProxy()})};
+const delKey=id=>{if(!confirm('撤销该密钥？撤销后立即失效。'))return;
+  fetch('/api/proxy/keys/'+id,{method:'DELETE'}).then(()=>{toast('已撤销');loadKeys()})};
+async function testAcct(){ toast('测试中…');
+  const r=await (await fetch('/api/proxy/test',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({model:'fast'})})).json();
+  toast(r.ok?('成功 · '+r.ms+'ms · '+(r.usage?.total_tokens||0)+' tokens'):'失败'); loadProxy(); loadCalls(); }
+
+$('#k-create').onclick=async()=>{
+  const name=$('#k-name').value.trim()||'default';
+  const r=await (await fetch('/api/proxy/keys',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({name})})).json();
+  if(r.ok){$('#k-new').innerHTML=`<div class="codebox" style="color:#86efac">${esc(r.key)}</div>
+    <div class="sub" style="margin-top:8px">只显示这一次，请立即保存。</div>`; loadKeys();}
+  else toast('生成失败');
+};
+
+/* 注册前确认 */
+const openPf=()=>{$('#pf').classList.add('on'); $('#pf-go').disabled=true; $('#pf-ok').checked=false;};
+$('#start').onclick=openPf; $('#start2').onclick=openPf;
+$('#pf-close').onclick=$('#pf-cancel').onclick=()=>$('#pf').classList.remove('on');
+$('#pf-ok').onchange=e=>$('#pf-go').disabled=!e.target.checked;
+$('#pf-go').onclick=async()=>{
+  const r=await (await fetch('/api/control',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({action:'start',concurrency:+($('#s-conc')?.value||1),target:+($('#s-target')?.value||1),
+      mode:$('#s-mode')?.value||'manual'})})).json();
+  if(r.ok){toast('已开始');$('#pf').classList.remove('on');loadTasks();loadStats()}
+  else toast(r.error||'启动失败');
+};
+
+/* 新增账号 */
+$('#add-acct').onclick=async()=>{
+  $('#mask').classList.add('on'); $('#m-url').textContent='生成中…';
+  const r=await (await fetch('/api/proxy/login',{method:'POST'})).json();
+  $('#m-url').textContent=r.url||('失败: '+JSON.stringify(r).slice(0,120));
+};
+$('#m-close').onclick=()=>$('#mask').classList.remove('on');
+$('#m-copy').onclick=()=>{navigator.clipboard?.writeText($('#m-url').textContent);toast('已复制')};
+$('#m-regen').onclick=async()=>{
+  $('#m-url').textContent='重新生成中…';
+  const r=await (await fetch('/api/proxy/login',{method:'POST'})).json();
+  $('#m-url').textContent=r.url||('失败: '+JSON.stringify(r).slice(0,120));
+  toast(r.url?'已生成新地址':'生成失败');
+};
+$('#m-submit').onclick=async()=>{
+  const url=$('#m-paste').value.trim(); if(!url)return toast('请粘贴回调地址');
+  const r=await (await fetch('/api/proxy/submit',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({url})})).json();
+  if(r.ok){
+    const em=$('#m-in-email').value.trim()||$('#m-email').textContent.trim();
+    const pw=$('#m-in-pass').value.trim()||$('#m-pass').textContent.trim();
+    if(em && em!=='—'){
+      await fetch('/api/accounts/manual',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({email:em,password:pw==='—'?'':pw})});
+    }
+    toast('授权成功');$('#mask').classList.remove('on');loadProxy();loadTasks();
+  } else toast('失败：'+(r.error||''));
+};
+
+$('#px-reg-toggle').onclick=()=>toggleScope('registration', !($('#px-reg-badge').textContent==='已开启'));
+$('#px-gw-toggle').onclick=()=>toggleScope('gateway', !($('#px-gw-badge').textContent==='已开启'));
+$('#px-reg-add').onclick=()=>addProxy('registration');
+$('#px-gw-add').onclick=()=>addProxy('gateway');
+$('#clear-tasks').onclick=()=>{if(!confirm('清空任务与日志？'))return;
+  fetch('/api/control',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({action:'clear'})}).then(()=>{toast('已清空');loadTasks();loadStats()})};
+$('#clear-log').onclick=()=>{$('#logs').innerHTML=''};
+$('#f-state')&&($('#f-state').onchange=loadTasks); $('#f-q')&&($('#f-q').oninput=loadTasks);
+
+const logs=$('#logs'), seen=new Set();
+const es=new EventSource('/api/logs/stream');
+es.onmessage=e=>{const l=JSON.parse(e.data); if(seen.has(l.id))return; seen.add(l.id);
+  const lv=$('#f-level')?.value; if(lv&&l.level!==lv)return;
+  const d=new Date(l.ts*1000), hh=d.toTimeString().slice(0,8);
+  const div=document.createElement('div'); div.className='l';
+  div.innerHTML=`<span class="t">${hh}</span><span class="lv ${l.level}">${l.level}</span><span>${esc(l.msg)}</span>`;
+  logs.appendChild(div); if(logs.children.length>600)logs.removeChild(logs.firstChild);
+  if($('#v-logs').classList.contains('on'))logs.scrollTop=logs.scrollHeight;};
+
+async function loadSettings(){
+  const c=await (await fetch('/api/config')).json();
+  $('#set-provider').value=c.mail.provider||'cloudflare';
+  $('#set-custom').value=c.mail.custom_url||'';
+  $('#set-token2').value=c.mail.api_token||'';
+  $('#set-manual').value=(c.mail.manual_mails||[]).map(x=>x.password?`${x.email},${x.password}`:x.email).join('\n');
+  applyProviderUI(c.mail.provider||'cloudflare');
+  $('#set-domain').value=c.mail.domain||'';
+  $('#set-worker').value=c.mail.worker_url||'';
+  $('#set-token').value=c.mail.api_token||'';
+  $('#set-panel-port').value=c.panel.port;
+  $('#set-gw-port').value=c.gateway.port;
+  $('#set-conc').value=c.registration.concurrency;
+  $('#set-target').value=c.registration.target;
+  $('#set-quota').value=c.quota?.stop_percent||95;
+  $('#set-warn').value=c.quota?.warn_percent||60;
+  $('#set-timeout').value=c.registration.task_timeout_s||600;
+  $('#set-retries').value=c.registration.retries_per_task??1;
+  $('#set-headless').value=String(c.registration.headless!==false);
+  const g=c.gateway_behavior||{};
+  $('#set-defmodel').value=g.default_model||'fast';
+  $('#set-maxtokens').value=g.max_tokens||4096;
+  $('#set-stream').value=String(g.allow_stream!==false);
+}
+function applyProviderUI(p){
+  const show=(id,on)=>{const el=$(id); if(el) el.style.display=on?'block':'none';};
+  show('#cfg-domain', p!=='manual');
+  show('#cfg-cf', p==='cloudflare');
+  show('#cfg-custom', p==='custom');
+  show('#cfg-manual', p==='manual');
+  show('#cfg-cf-hint', p==='cloudflare');
+  show('#cfg-manual-hint', p==='manual');
+}
+$('#set-provider').onchange=e=>applyProviderUI(e.target.value);
+$('#set-save').onclick=async()=>{
+  const body={
+    mail:{provider:$('#set-provider').value,domain:$('#set-domain').value.trim(),
+      worker_url:$('#set-worker').value.trim(),
+      api_token:($('#set-provider').value==='custom'?$('#set-token2'):$('#set-token')).value.trim(),
+      custom_url:$('#set-custom').value.trim(),
+      manual_mails:$('#set-manual').value.split('\n').map(l=>l.trim()).filter(Boolean).map(l=>{
+        const [email,password]=l.split(',');
+        return password?{email:email.trim(),password:password.trim()}:{email:email.trim()};
+      })},
+    panel:{port:+$('#set-panel-port').value},
+    gateway:{port:+$('#set-gw-port').value},
+    registration:{concurrency:+$('#set-conc').value,target:+$('#set-target').value,
+      task_timeout_s:+$('#set-timeout').value, retries_per_task:+$('#set-retries').value,
+      headless:$('#set-headless').value==='true'},
+    quota:{stop_percent:+$('#set-quota').value, warn_percent:+$('#set-warn').value},
+    gateway_behavior:{default_model:$('#set-defmodel').value,
+      max_tokens:+$('#set-maxtokens').value, allow_stream:$('#set-stream').value==='true'},
+  };
+  const r=await (await fetch('/api/settings',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(body)})).json();
+  toast(r.ok?(r.restart_required?'已保存，端口改动需重启':'已保存'):'保存失败');
+  if(r.ok){loadSettings(); refreshGatewayProxies();}
+};
+function maybeOnboard(){
+  if(localStorage.getItem('aq_ob_off')==='1')return;
+  const m=$('#ob'); if(m) m.classList.add('on');
+}
+$('#ob-close').onclick=()=>{ $('#ob').classList.remove('on'); if($('#ob-off').checked) localStorage.setItem('aq_ob_off','1'); };
+$('#ob-go').onclick=()=>{ $('#ob').classList.remove('on'); if($('#ob-off').checked) localStorage.setItem('aq_ob_off','1'); };
+$('#ob-off').onchange=e=>{ if(e.target.checked) localStorage.setItem('aq_ob_off','1'); else localStorage.removeItem('aq_ob_off'); };
+
+loadProxy();loadStats();loadTasks();loadCalls();loadProxies();loadSettings();maybeOnboard();
+(async()=>{try{
+  const c=await (await fetch('/api/config')).json();
+  const base=`http://${c.gateway.host}:${c.gateway.port}/v1`;
+  const el=$('#k-sample');
+  if($('#pf-domain')) $('#pf-domain').textContent=c.mail.domain||'未配置';
+  if(el) el.textContent=`from openai import OpenAI\n\nclient = OpenAI(\n    base_url="${base}",\n    api_key="qk_xxxxxxxxxxxxxxxx",\n)\nresp = client.chat.completions.create(\n    model="fast",            # fast | balanced | smart | advanced\n    messages=[{"role": "user", "content": "hi"}],\n)`;
+}catch(e){}})();
+setInterval(loadProxy,5000);setInterval(loadStats,4000);setInterval(loadTasks,4000);
+</script>
+</body>
+</html>
