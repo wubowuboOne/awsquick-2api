@@ -4,6 +4,11 @@
 
 **作者：Trash-Makers** · MIT License · [GitHub](https://github.com/Trash-Makers/awsquick-2api)
 
+![控制台界面](docs/dashboard.png)
+
+> 可视化控制台：账号池、额度、成本与调用明细都在同一屏里，附带一个可以直接试号的对话窗口。
+
+
 ---
 
 ## 这是什么
