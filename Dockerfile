@@ -16,7 +16,8 @@ WORKDIR /app
 # Python dependencies
 COPY requirements.txt .
 RUN python3 -m venv /opt/venv \
-    && pip install --no-cache-dir -r requirements.txt
+    && /opt/venv/bin/pip install --no-cache-dir -r requirements.txt \
+    && /opt/venv/bin/pip install --no-cache-dir Flask
 
 # Node.js gateway dependencies
 COPY vendor/quick-gateway/package.json vendor/quick-gateway/package.json
