@@ -10,6 +10,7 @@
 import os
 import queue
 import subprocess
+import sys
 import threading
 import time
 import traceback
@@ -258,7 +259,7 @@ class LiveRunner(BaseRunner):
         t = db.get_task(self.tid)
         self.step("page_loaded", f"启动真实注册：{t['email']}")
         try:
-            cmd = ["python3", os.path.join(ROOT, "tools", "run_quick.py"),
+            cmd = [sys.executable, os.path.join(ROOT, "tools", "run_quick.py"),
                    "--email", t["email"], "--name", t["name"] or "Ethan Caldwell"]
             if t.get("proxy"):
                 cmd += ["--proxy", t["proxy"]]

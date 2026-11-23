@@ -16,8 +16,8 @@ WORKDIR /app
 # Python dependencies
 COPY requirements.txt .
 RUN python3 -m venv /opt/venv \
-    && /opt/venv/bin/pip install --no-cache-dir -r requirements.txt \
-    && /opt/venv/bin/pip install --no-cache-dir Flask
+    && /opt/venv/bin/python -m pip install --no-cache-dir -r requirements.txt \
+    && /opt/venv/bin/python -c "import flask, patchright, playwright"
 
 # Node.js gateway dependencies
 COPY vendor/quick-gateway/package.json vendor/quick-gateway/package.json
@@ -28,7 +28,7 @@ RUN cd vendor/quick-gateway \
 COPY . .
 
 # Browser dependencies
-RUN python -m patchright install --with-deps chromium
+RUN /opt/venv/bin/python -m patchright install --with-deps chromium
 
 # Persistent data directory
 RUN mkdir -p /data/oauth \
