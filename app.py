@@ -457,5 +457,10 @@ def api_stream():
 if __name__ == "__main__":
     engine.reconcile_stuck_tasks()
     _p = CFG["panel"]
-    db.log(f"面板启动 http://{_p['host']}:{_p['port']}", "system")
-    app.run(host=_p["host"], port=_p["port"], threaded=True, debug=_p.get("debug", False))
+    db.log(f"面板启动 http://0.0.0.0:{_p['port']}", "system")
+    app.run(
+        host="0.0.0.0",
+        port=_p["port"],
+        threaded=True,
+        debug=_p.get("debug", False)
+    )
