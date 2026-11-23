@@ -24,7 +24,7 @@ DEFAULTS = {
                          "allow_stream": True, "cors": True},
 }
 
-_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
+_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "/data/config.json")
 
 
 def _merge(base, over):
