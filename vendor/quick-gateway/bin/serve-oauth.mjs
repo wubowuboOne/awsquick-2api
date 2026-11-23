@@ -33,14 +33,12 @@ mkdirSync(DATA, { recursive: true })
 const KEYS_FILE = join(DATA, 'keys.json')
 const CALLS_FILE = join(DATA, 'calls.jsonl')
 
-/* 代理：读项目根的 config.json，proxy.enabled 为真时按账号轮询 */
+/* 代理：读项目 data/config.json，proxy.enabled 为真时按账号轮询 */
 const CONFIG_CANDIDATES = [
-  process.env.CONFIG_FILE,
-  new URL('../../../config.json', import.meta.url),
-  new URL('../../config.json', import.meta.url),
-  join(process.cwd(), 'config.json'),
-  join(process.cwd(), '../../config.json'),
-].filter(Boolean)
+  new URL('../../../data/config.json', import.meta.url),
+  join(process.cwd(), 'data', 'config.json'),
+  join(process.cwd(), '../../data/config.json'),
+]
 let CONFIG_FILE = null
 let proxyAgents = []
 function readConfig() {

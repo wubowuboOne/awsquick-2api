@@ -212,7 +212,7 @@ def _otp_endpoint(tid):
 
 
 def _mail_creds():
-    """取信凭据：config.json 优先，退回 data/mail_bridge.json。"""
+    """取信凭据：data/config.json 优先，退回 data/mail_bridge.json。"""
     import json
     cfg = config.CFG.get("mail") or {}
     if cfg.get("worker_url") and cfg.get("api_token"):

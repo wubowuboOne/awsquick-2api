@@ -101,8 +101,7 @@ def api_proxy_test():
 
 
 def _save_cfg():
-    with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json"), "w", encoding="utf-8") as f:
-        json.dump(CFG, f, ensure_ascii=False, indent=2)
+    config.save(CFG)
 
 
 @app.post("/api/settings")

@@ -87,11 +87,7 @@ cd vendor/quick-gateway && npm install && cd ../..
 
 ### 3. 配置
 
-```bash
-cp config.example.json config.json
-```
-
-打开控制台（下一步启动后）在 **设置 → 收信配置** 里填，或直接编辑 `config.json`。
+首次启动会自动在 `data/config.json` 创建默认配置。打开控制台后可在 **设置 → 收信配置** 中修改，也可以直接编辑该文件。
 
 ### 4. 启动
 
@@ -228,7 +224,7 @@ bob@your-domain.com
 
 ## 配置项
 
-`config.json`（**不要提交到仓库**）：
+`data/config.json`（**不要提交到仓库**）：
 
 | 字段 | 说明 |
 |---|---|
@@ -298,7 +294,7 @@ bob@your-domain.com
 `data/` 目录包含账号会话、API 密钥、邮箱密码、调用账本，**已在 `.gitignore` 中排除**。
 部署时请确认：
 
-- `config.json` 不提交、不外发
+- `data/config.json` 不提交、不外发
 - `data/` 不进入任何备份或同步目录
 - 网关与控制台默认只绑 `127.0.0.1`
 

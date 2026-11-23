@@ -1,7 +1,6 @@
-"""集中配置：读 config.json，环境变量优先。
+"""集中配置：读 data/config.json，环境变量优先。
 
-新用户只需复制 config.example.json 为 config.json 再改几项，
-不需要动代码里的任何常量。
+首次启动时会自动在 data/ 下创建默认配置。
 """
 import json
 import os
@@ -24,7 +23,8 @@ DEFAULTS = {
                          "allow_stream": True, "cors": True},
 }
 
-_PATH = "/app/data/config.json"
+_DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
+_PATH = os.path.join(_DATA_DIR, "config.json")
 
 
 def _merge(base, over):
@@ -43,7 +43,7 @@ def load():
         with open(_PATH, encoding="utf-8") as f:
             cfg = _merge(cfg, json.load(f))
     except FileNotFoundError:
-        pass
+        save(cfg)
     except Exception as e:
         print(f"[config] 读取失败，使用默认值：{e}")
     # 环境变量覆盖
@@ -59,6 +59,12 @@ def load():
     if env.get("WORKER_TOKEN"):
         cfg["mail"]["api_token"] = env["WORKER_TOKEN"]
     return cfg
+
+
+def save(cfg):
+    os.makedirs(_DATA_DIR, exist_ok=True)
+    with open(_PATH, "w", encoding="utf-8") as f:
+        json.dump(cfg, f, ensure_ascii=False, indent=2)
 
 
 CFG = load()
