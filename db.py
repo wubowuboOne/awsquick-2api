@@ -24,6 +24,12 @@ CREATE TABLE IF NOT EXISTS tasks (
 );
 CREATE INDEX IF NOT EXISTS idx_tasks_state ON tasks(state);
 
+CREATE TABLE IF NOT EXISTS otp_codes (
+    task_id  INTEGER PRIMARY KEY,
+    code     TEXT NOT NULL,
+    ts       REAL NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS logs (
     id      INTEGER PRIMARY KEY AUTOINCREMENT,
     ts      REAL NOT NULL,
@@ -187,3 +193,20 @@ def mark_resource(kind, value, ok):
     with conn() as c:
         c.execute(f"UPDATE pools SET {col}={col}+1, status='idle' WHERE kind=? AND value=?",
                   (kind, value))
+
+
+# ---------- 验证码（面板重启也不丢） ----------
+def put_otp(tid, code):
+    with conn() as c:
+        c.execute("INSERT INTO otp_codes (task_id, code, ts) VALUES (?,?,?) "
+                  "ON CONFLICT(task_id) DO UPDATE SET code=excluded.code, ts=excluded.ts",
+                  (int(tid), str(code), time.time()))
+
+
+def pop_otp(tid):
+    with conn() as c:
+        row = c.execute("SELECT code FROM otp_codes WHERE task_id=?", (int(tid),)).fetchone()
+        if not row:
+            return None
+        c.execute("DELETE FROM otp_codes WHERE task_id=?", (int(tid),))
+        return row["code"]

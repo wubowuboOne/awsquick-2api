@@ -111,7 +111,8 @@ def api_settings_save():
     for section, keys in {
         "panel": ("host", "port"),
         "gateway": ("host", "port"),
-        "mail": ("provider", "domain", "worker_url", "api_token", "custom_url", "manual_mails"),
+        "mail": ("provider", "domain", "worker_url", "api_token", "custom_url",
+                 "manual_mails", "imap"),
         "registration": ("concurrency", "target", "headless", "task_timeout_s", "retries_per_task"),
         "quota": ("stop_percent", "warn_percent"),
         "gateway_behavior": ("default_model", "max_tokens", "allow_stream", "cors"),
@@ -213,6 +214,11 @@ def api_accounts_manual():
 def api_otp_get():
     tid = request.args.get("task", "0")
     code = OTP_WAITING.pop(tid, None)
+    if tid.isdigit():
+        if code:
+            db.pop_otp(int(tid))         # 已从内存取到，清掉库里的副本
+        else:
+            code = db.pop_otp(int(tid))  # 面板重启后仍能取到
     if code:
         return jsonify({"ok": True, "code": code})
     return jsonify({"ok": False})
@@ -226,6 +232,8 @@ def api_otp_put():
     if not tid or not code:
         return jsonify({"ok": False, "error": "缺少任务号或验证码"}), 400
     OTP_WAITING[tid] = code
+    if tid.isdigit():
+        db.put_otp(int(tid), code)
     db.log(f"手动录入验证码：{code}", "step", int(tid) if tid.isdigit() else None)
     return jsonify({"ok": True})
 

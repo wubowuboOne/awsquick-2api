@@ -12,7 +12,8 @@ DEFAULTS = {
     "registration": {"concurrency": 1, "target": 1, "headless": True,
                      "task_timeout_s": 600, "retries_per_task": 1},
     "mail": {"provider": "cloudflare", "domain": "", "worker_url": "",
-             "api_token": "", "custom_url": "", "manual_mails": []},
+             "api_token": "", "custom_url": "", "manual_mails": [],
+             "imap": {"host": "", "port": 993}},
     "proxy": {
         "registration": {"enabled": False, "list": []},
         "gateway": {"enabled": False, "list": []},

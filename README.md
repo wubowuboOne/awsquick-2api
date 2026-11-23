@@ -171,7 +171,7 @@ curl http://127.0.0.1:3426/v1/chat/completions \
 
 ## 收信配置（注册机需要）
 
-三种方式，任选其一：
+四种方式，任选其一：
 
 ### 方式 A：Cloudflare Email Routing + Worker（推荐）
 
@@ -198,16 +198,31 @@ https://your-mail-api/latest?to={to}&token={token}
 
 控制台里填入这个模板，`{to}` 会替换成收件地址，`{token}` 替换成你填的密钥。
 
-### 方式 C：手动邮箱池
+### 方式 C：IMAP 直连（全自动，任意邮箱）
 
-不接任何收信服务。在设置里逐行填：
+不需要域名、不需要转发。在设置里选「IMAP 自动取信」，填：
+
+```
+alice@gmail.com,abcd efgh ijkl mnop
+bob@qq.com,xxxxxxxxxxxxxxxx
+```
+
+第二列是**应用专用密码**，不是登录密码：Gmail 需开启两步验证后生成，QQ/163 需在设置里开启 IMAP 并获取授权码。
+
+IMAP 服务器可留空自动识别（Gmail / Outlook / QQ / 163 / Yahoo / iCloud 都认），也可手填。
+程序只读未读邮件取 6 位码；取不到会自动回退成「面板手动填码」，不会卡死。
+
+### 方式 D：手动邮箱池
+
+不接任何收信服务。在设置里逐行填邮箱：
 
 ```
 alice@your-domain.com,Passw0rd!
 bob@your-domain.com
 ```
 
-注册跑到验证码那步会停下，你在「注册任务」里填入 6 位码即可继续。
+注册跑到验证码那步会停下，任务行会**高亮并显示已等待时间**，你在那一行填入 6 位码即可继续。
+等待上限 5 分钟，期间页面标题会提示 `(1) 等待验证码`。
 
 > ⚠️ 公共临时邮箱域名会被 AWS 拒绝（`ERR-837`），必须使用自有域名。
 
@@ -219,11 +234,12 @@ bob@your-domain.com
 |---|---|
 | `panel.port` | 控制台端口，默认 8787 |
 | `gateway.port` | 网关端口，默认 3426 |
-| `mail.provider` | `cloudflare` / `custom` / `manual` |
+| `mail.provider` | `cloudflare` / `custom` / `imap` / `manual` |
 | `mail.domain` | 注册用的邮箱域名 |
 | `mail.worker_url` / `mail.api_token` | 方式 A 的 Worker 地址与口令 |
 | `mail.custom_url` | 方式 B 的取信接口模板 |
-| `mail.manual_mails` | 方式 C 的邮箱池 |
+| `mail.manual_mails` | 方式 C / D 的邮箱池（IMAP 模式第二列是应用密码） |
+| `mail.imap` | 方式 C 的 IMAP 服务器与端口（留空自动识别） |
 | `registration.concurrency` | 注册并发（建议 1~2） |
 | `registration.target` | 单批目标数量 |
 | `registration.task_timeout_s` | 单任务超时 |

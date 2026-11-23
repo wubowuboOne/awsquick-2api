@@ -215,6 +215,8 @@
   .notice .tx{font-size:12.5px;line-height:1.9;color:#6b5a2e;flex:1}
   .notice .tx b{color:#3f3415}
   .notice .btn{align-self:flex-start;white-space:nowrap}
+  tr.row-otp{background:#fffdf2;box-shadow:inset 3px 0 0 #d97706}
+  tr.row-otp:hover{background:#fffaea}
 </style>
 <style>
   .krow{display:grid;grid-template-columns:1fr 1fr;gap:12px}
@@ -265,6 +267,8 @@
   .notice .tx{font-size:12.5px;line-height:1.9;color:#6b5a2e;flex:1}
   .notice .tx b{color:#3f3415}
   .notice .btn{align-self:flex-start;white-space:nowrap}
+  tr.row-otp{background:#fffdf2;box-shadow:inset 3px 0 0 #d97706}
+  tr.row-otp:hover{background:#fffaea}
 </style>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 28 28%27%3E%3Crect width=%2728%27 height=%2728%27 rx=%278%27 fill=%27%230b0b0a%27/%3E%3Cpath d=%27M16.6 4.8 L9.2 15.4 h4.9 l-1.7 7.8 7.6-11 h-5.1 z%27 fill=%27white%27/%3E%3C/svg%3E">
 </head>
@@ -554,7 +558,8 @@ resp = client.chat.completions.create(
             <select id="set-provider" style="width:100%;margin-top:6px">
               <option value="cloudflare">Cloudflare Email Routing + Worker（推荐）</option>
               <option value="custom">其它邮箱项目的 HTTP 接口</option>
-              <option value="manual">手动邮箱池（自己准备多个邮箱，逐个注册）</option>
+              <option value="imap">IMAP 自动取信（填应用专用密码，全自动）</option>
+              <option value="manual">手动邮箱池（自己准备多个邮箱，验证码手动填）</option>
             </select></label>
           <div id="cfg-domain">
             <label class="sub">邮箱域名（用于注册，如 your-domain.com）
@@ -572,6 +577,18 @@ resp = client.chat.completions.create(
             <label class="sub" style="display:block;margin-top:10px">接口密钥（替换 {token}）
               <input id="set-token2" type="password" autocomplete="off" style="width:100%;margin-top:6px"></label>
           </div>
+          <div id="cfg-imap" style="display:none">
+            <div style="display:grid;grid-template-columns:2fr 1fr;gap:10px">
+              <label class="sub">IMAP 服务器（留空自动识别）
+                <input id="set-imap-host" style="width:100%;margin-top:6px" placeholder="imap.gmail.com"></label>
+              <label class="sub">端口
+                <input id="set-imap-port" type="number" style="width:100%;margin-top:6px" placeholder="993"></label>
+            </div>
+            <label class="sub" style="display:block;margin-top:10px">邮箱列表（每行 <span class="mono">邮箱,IMAP 应用密码</span>）
+              <textarea id="set-imap-mails" style="width:100%;min-height:110px;margin-top:6px;background:var(--surface2);
+                border:1px solid var(--border);border-radius:12px;padding:10px;font-family:ui-monospace,Menlo,monospace;
+                font-size:11.5px;outline:none" placeholder="alice@gmail.com,abcd efgh ijkl mnop"></textarea></label>
+          </div>
           <div id="cfg-manual" style="display:none">
             <label class="sub">邮箱池（每行一个，<span class="mono">邮箱,密码</span>，密码可留空）
               <textarea id="set-manual" style="width:100%;min-height:110px;margin-top:6px;background:var(--surface2);
@@ -582,6 +599,10 @@ resp = client.chat.completions.create(
         <div class="sub" id="cfg-cf-hint" style="margin-top:12px;line-height:1.9">
           域名需托管在 Cloudflare，并开启 Email Routing 的 catch-all → 该 Worker。<br>
           公共临时邮箱域名会被 AWS 直接拒绝（ERR-837）。
+        </div>
+        <div class="sub" id="cfg-imap-hint" style="display:none;margin-top:12px;line-height:1.9">
+          密码不是邮箱登录密码，是「应用专用密码」：Gmail 需开两步验证后生成，QQ/163 在设置里开启 IMAP 并拿授权码。<br>
+          程序只读未读邮件、取 6 位验证码；取不到会自动回退成「面板手动填码」，不会卡死。
         </div>
         <div class="sub" id="cfg-manual-hint" style="display:none;margin-top:12px;line-height:1.9">
           注册跑到验证码那步会停下，你到对应邮箱取码，在「注册任务」里填入即可继续。
@@ -859,10 +880,14 @@ async function loadTasks(){
     const [cls,txt]=map[r.state]||['info',r.state];
     return `<span class="badge ${cls}">${txt}</span>`;
   };
+  const waiting=rows.filter(r=>r.state==='waiting_otp').length;
+  document.title=waiting?`(${waiting}) 等待验证码 · AWS Quick 控制台`:'AWS Quick 控制台';
   $('#t-rows').innerHTML=rows.map(r=>{
     const pooled=POOLED.has((r.email||'').toLowerCase());
-    return `<tr><td class="mono" style="color:var(--dim)">${r.id}</td>
+    const wait=r.state==='waiting_otp' ? Math.max(0, Math.round(Date.now()/1000 - (r.updated_at||0))) : 0;
+    return `<tr class="${r.state==='waiting_otp'?'row-otp':''}"><td class="mono" style="color:var(--dim)">${r.id}</td>
     <td class="mono">${esc(r.email)}${r.state==='waiting_otp'
+      ? `<div style="font-size:11px;color:#a16207;margin-top:4px">⏳ 已等待 ${wait} 秒</div>`:''}${r.state==='waiting_otp'
       ? `<div style="margin-top:6px;display:flex;gap:6px">
            <input id="otp-${r.id}" placeholder="6 位验证码" style="height:28px;width:110px;font-size:11.5px">
            <button class="btn sm" onclick="submitOtp(${r.id})">提交</button></div>`:''}</td>
@@ -1040,7 +1065,12 @@ async function loadSettings(){
   $('#set-provider').value=c.mail.provider||'cloudflare';
   $('#set-custom').value=c.mail.custom_url||'';
   $('#set-token2').value=c.mail.api_token||'';
-  $('#set-manual').value=(c.mail.manual_mails||[]).map(x=>x.password?`${x.email},${x.password}`:x.email).join('\n');
+  const mailLines=(c.mail.manual_mails||[]).map(x=>x.password?`${x.email},${x.password}`:x.email).join('\n');
+  $('#set-manual').value=mailLines;
+  const im=$('#set-imap-mails'); if(im) im.value=mailLines;
+  const mc=c.mail.imap||{};
+  if($('#set-imap-host')) $('#set-imap-host').value=mc.host||'';
+  if($('#set-imap-port')) $('#set-imap-port').value=mc.port||993;
   applyProviderUI(c.mail.provider||'cloudflare');
   $('#set-domain').value=c.mail.domain||'';
   $('#set-worker').value=c.mail.worker_url||'';
@@ -1066,6 +1096,9 @@ function applyProviderUI(p){
   show('#cfg-cf', p==='cloudflare');
   show('#cfg-custom', p==='custom');
   show('#cfg-manual', p==='manual');
+  show('#cfg-imap', p==='imap');
+  show('#cfg-domain', p!=='manual' && p!=='imap');
+  show('#cfg-imap-hint', p==='imap');
   show('#cfg-cf-hint', p==='cloudflare');
   show('#cfg-manual-hint', p==='manual');
 }
@@ -1076,7 +1109,8 @@ $('#set-save').onclick=async()=>{
       worker_url:$('#set-worker').value.trim(),
       api_token:($('#set-provider').value==='custom'?$('#set-token2'):$('#set-token')).value.trim(),
       custom_url:$('#set-custom').value.trim(),
-      manual_mails:$('#set-manual').value.split('\n').map(l=>l.trim()).filter(Boolean).map(l=>{
+      imap:{host:($('#set-imap-host')?.value||'').trim(), port:+($('#set-imap-port')?.value||993)},
+      manual_mails:($('#set-provider').value==='imap'?$('#set-imap-mails'):$('#set-manual')).value.split('\n').map(l=>l.trim()).filter(Boolean).map(l=>{
         const [email,password]=l.split(',');
         return password?{email:email.trim(),password:password.trim()}:{email:email.trim()};
       })},

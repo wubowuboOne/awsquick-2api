@@ -106,7 +106,7 @@ class Engine:
         rng = random.Random()
         m = config.CFG.get("mail") or {}
         manual = [x for x in (m.get("manual_mails") or []) if (x.get("email") or "").strip()] \
-            if m.get("provider") == "manual" else []
+            if m.get("provider") in ("manual", "imap") else []
         doms = [d for d in (db.list_resources("domain") or []) if "." in (d["value"] or "")]
         if not manual and not doms:
             raise RuntimeError("没有可用邮箱：手动模式请先在设置里添加邮箱，其它模式请先配置域名")
@@ -164,17 +164,46 @@ def db_recent_emails():
         return [dict(r) for r in c.execute("SELECT email FROM tasks")]
 
 
+IMAP_HOSTS = {
+    "gmail.com": "imap.gmail.com", "googlemail.com": "imap.gmail.com",
+    "outlook.com": "outlook.office365.com", "hotmail.com": "outlook.office365.com",
+    "live.com": "outlook.office365.com", "msn.com": "outlook.office365.com",
+    "qq.com": "imap.qq.com", "foxmail.com": "imap.qq.com",
+    "163.com": "imap.163.com", "126.com": "imap.126.com", "yeah.net": "imap.yeah.net",
+    "yahoo.com": "imap.mail.yahoo.com", "icloud.com": "imap.mail.me.com",
+    "me.com": "imap.mail.me.com",
+}
+
+
+def _imap_for(email):
+    """IMAP 模式：返回 (host, port, user, password)；不适用返回 None。"""
+    m = config.CFG.get("mail") or {}
+    if m.get("provider") != "imap":
+        return None
+    entry = next((x for x in (m.get("manual_mails") or [])
+                  if (x.get("email") or "").lower() == (email or "").lower()), None)
+    if not entry or not (entry.get("password") or "").strip():
+        return None
+    cfg_imap = m.get("imap") or {}
+    host = (cfg_imap.get("host") or "").strip() or IMAP_HOSTS.get(
+        (email.split("@")[-1] or "").lower(), "")
+    if not host:
+        return None          # 认不出服务器就退回面板手动填码
+    port = int(cfg_imap.get("port") or 993)
+    return host, port, email, entry["password"].strip()
+
+
 def _otp_endpoint(tid):
     """按邮箱来源返回 (url, token)。手动模式指向面板自身的取码接口。"""
     m = config.CFG.get("mail") or {}
     prov = m.get("provider", "cloudflare")
-    if prov == "manual":
+    if prov in ("manual", "imap"):
         host = config.CFG["panel"].get("host", "127.0.0.1")
         port = config.CFG["panel"].get("port", 8787)
         return f"http://{host}:{port}/api/otp?task={tid}", "manual"
     if prov == "custom" and m.get("custom_url"):
-        u = m["custom_url"].replace("{token}", m.get("api_token", "") or "")
-        return u.replace("{to}", ""), m.get("api_token", "")
+        # 保留 {to}/{token} 占位符，由 run_quick 按邮箱填充
+        return m["custom_url"], (m.get("api_token", "") or "")
     # Cloudflare / 默认：用 Worker 的 /latest 接口
     creds = _mail_creds()
     if creds:
@@ -237,8 +266,14 @@ class LiveRunner(BaseRunner):
             if otp:
                 url_tpl, tok = otp
                 cmd += ["--otp-url", url_tpl.replace("{to}", t["email"]), "--otp-token", tok]
-                if (config.CFG.get("mail") or {}).get("provider") == "manual":
-                    self.step("waiting_otp", "手动模式：请在面板里填入验证码")
+            imap = _imap_for(t["email"])
+            if imap:
+                host, port, user, pwd = imap
+                cmd += ["--otp-imap-host", host, "--otp-imap-port", str(port),
+                        "--otp-imap-user", user, "--otp-imap-pass", pwd]
+                self.step("waiting_otp", f"IMAP 取信中：{host}（拿不到可在面板填码）")
+            elif otp:
+                self.step("waiting_otp", "手动模式：请在面板里填入验证码")
             else:
                 db.log("未配置收信来源，验证码无法读取", "error", self.tid)
             r = subprocess.run(cmd,

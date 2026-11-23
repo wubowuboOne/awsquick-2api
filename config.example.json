@@ -20,7 +20,11 @@
     "api_token": "change-me",
     "provider": "cloudflare",
     "custom_url": "https://your-mail-api/latest?to={to}&token={token}",
-    "manual_mails": []
+    "manual_mails": [],
+    "imap": {
+      "host": "",
+      "port": 993
+    }
   },
   "proxy": {
     "registration": {

@@ -69,23 +69,141 @@ def enter_text(page, selector, text):
     return val()
 
 
-def wait_otp(url, token, to, timeout=100):
+def wait_otp(url, token, to, timeout=300):
     """轮询 Worker，取发给 to 的最新验证码。"""
     import urllib.parse
     deadline = time.time() + timeout
+    import urllib.parse as _up
+    # 三种来源：面板接口（已带 ?task=）、自定义模板（含 {to}）、Worker 基础地址（补 /latest）
+    if "{to}" in url or "{token}" in url:
+        final = url.replace("{to}", _up.quote(to)).replace("{token}", _up.quote(token))
+    elif "?" in url:
+        final = f"{url}&{_up.urlencode({'to': to, 'token': token})}"
+    else:
+        final = f"{url}/latest?{_up.urlencode({'to': to, 'token': token})}"
     while time.time() < deadline:
-        q = urllib.parse.urlencode({"to": to, "token": token})
         try:
-            req = urllib.request.Request(f"{url}/latest?{q}",
+            req = urllib.request.Request(final,
                                          headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"})
             with urllib.request.urlopen(req, timeout=15) as f:
                 d = json.load(f)
-            m = d.get("message")
+            # 兼容两种返回：Worker {"message":{...}} 与面板 {"code":...,"ok":true}
+            m = d.get("message") or ({"code": d.get("code"), "via": "panel"} if d.get("code") else None)
             if m and m.get("code"):
                 return m["code"], m
         except Exception:
             pass
         time.sleep(4)
+    return None, None
+
+
+
+# ---------- 取码：IMAP 直连优先，失败回退到 HTTP/面板 ----------
+IMAP_HOSTS = {
+    "gmail.com": "imap.gmail.com", "googlemail.com": "imap.gmail.com",
+    "outlook.com": "outlook.office365.com", "hotmail.com": "outlook.office365.com",
+    "live.com": "outlook.office365.com", "msn.com": "outlook.office365.com",
+    "qq.com": "imap.qq.com", "foxmail.com": "imap.qq.com",
+    "163.com": "imap.163.com", "126.com": "imap.126.com",
+    "yeah.net": "imap.yeah.net",
+    "yahoo.com": "imap.mail.yahoo.com",
+    "icloud.com": "imap.mail.me.com", "me.com": "imap.mail.me.com",
+}
+
+
+def guess_imap_host(email):
+    dom = (email.split("@")[-1] or "").lower()
+    return IMAP_HOSTS.get(dom, "")
+
+
+def _mail_text(msg):
+    """把邮件正文拼成纯文本（解码各种传输编码）。"""
+    import email as _email
+    chunks = []
+    if msg.is_multipart():
+        for part in msg.walk():
+            if part.get_content_maintype() == "multipart":
+                continue
+            disp = (part.get("Content-Disposition") or "").lower()
+            if "attachment" in disp:
+                continue
+            try:
+                payload = part.get_payload(decode=True)
+                if payload is None:
+                    continue
+                cs = part.get_content_charset() or "utf-8"
+                chunks.append(payload.decode(cs, "ignore"))
+            except Exception:
+                continue
+    else:
+        try:
+            chunks.append((msg.get_payload(decode=True) or b"").decode(
+                msg.get_content_charset() or "utf-8", "ignore"))
+        except Exception:
+            pass
+    return "\n".join(chunks)
+
+
+def wait_code_imap(user, password, host, port, deadline):
+    """轮询邮箱未读邮件，取 AWS 的 6 位验证码。"""
+    import imaplib, email as _email, re as _re
+    last_err = ""
+    while time.time() < deadline:
+        try:
+            box = imaplib.IMAP4_SSL(host, int(port), timeout=25)
+            box.login(user, password)
+            box.select("INBOX")
+            typ, data = box.search(None, "UNSEEN")
+            ids = (data[0] or b"").split()[-6:]
+            for i in reversed(ids):
+                typ, raw = box.fetch(i, "(RFC822)")
+                if typ != "OK" or not raw or not raw[0]:
+                    continue
+                msg = _email.message_from_bytes(raw[0][1])
+                subj = str(_email.header.make_header(_email.header.decode_header(
+                    msg.get("Subject") or "")))
+                body = _mail_text(msg)
+                blob = subj + "\n" + body
+                if "AWS" not in blob and "verification" not in blob.lower():
+                    continue
+                m = _re.search(r"\b(\d{6})\b", body) or _re.search(r"\b(\d{6})\b", subj)
+                if m:
+                    try:
+                        box.store(i, "+FLAGS", "(\\Seen)")
+                    except Exception:
+                        pass
+                    try:
+                        box.logout()
+                    except Exception:
+                        pass
+                    return m.group(1), {"subject": subj[:80], "via": "imap"}
+            try:
+                box.logout()
+            except Exception:
+                pass
+        except Exception as e:
+            last_err = str(e)[:120]
+        time.sleep(5)
+    if last_err:
+        print("IMAP 取信失败:", last_err)
+    return None, None
+
+
+def acquire_code(a, timeout=300):
+    """IMAP 优先；拿不到就回退到 HTTP 取码（面板手动录入）。"""
+    deadline = time.time() + timeout
+    if getattr(a, "otp_imap_user", None) and getattr(a, "otp_imap_pass", None):
+        host = a.otp_imap_host or guess_imap_host(a.otp_imap_user)
+        if host:
+            print(f"取码：IMAP {host} （{a.otp_imap_user}）")
+            code, mail = wait_code_imap(a.otp_imap_user, a.otp_imap_pass, host,
+                                        a.otp_imap_port or 993, min(deadline, time.time() + 240))
+            if code:
+                return code, mail
+            print("IMAP 没取到，改为等待面板录入")
+    if getattr(a, "otp_url", None):
+        left = max(30, int(deadline - time.time()))
+        return wait_otp(a.otp_url, a.otp_token, a.email, left)
     return None, None
 
 
@@ -196,7 +314,7 @@ class Run:
             print("\n判定:", verdict, "| send-otp:", otp[-1] if otp else "none")
 
             if "verify-otp" in url and a.otp_url and a.otp_token:
-                code, mail = wait_otp(a.otp_url, a.otp_token, a.email, 110)
+                code, mail = acquire_code(a)
                 self.rec["otp"] = {"code": code, "subject": (mail or {}).get("subject")}
                 if not code:
                     print("✗ 没取到验证码")
@@ -313,6 +431,10 @@ if __name__ == "__main__":
     ap.add_argument("--locale", default=None)
     ap.add_argument("--timezone", default=None)
     ap.add_argument("--headless", action="store_true", default=True)
+    ap.add_argument("--otp-imap-host", default="")
+    ap.add_argument("--otp-imap-port", type=int, default=993)
+    ap.add_argument("--otp-imap-user", default="")
+    ap.add_argument("--otp-imap-pass", default="")
     ap.add_argument("--otp-url", default=None, help="Worker 取信地址")
     ap.add_argument("--then-authorize", default=None,
                     help="注册完成后，在同一个浏览器里直接打开这个授权地址（验证能否免登录）")
