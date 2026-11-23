@@ -35,4 +35,4 @@ RUN mkdir -p /data/oauth \
 
 EXPOSE 8787 3426
 
-CMD ["python", "app.py"]
+CMD ["/bin/bash", "-lc", "cd /app/vendor/quick-gateway && HOST=0.0.0.0 PORT=3426 node bin/serve-oauth.mjs & cd /app && python app.py"]
